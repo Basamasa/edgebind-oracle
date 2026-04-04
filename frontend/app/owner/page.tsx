@@ -190,6 +190,8 @@ export default async function OwnerPage({
                 rpContext={null}
                 worldReady={world.status === "configured"}
                 userId={sessionUser.id}
+                handoffId={getValue(params.handoff) || null}
+                autoStart={getValue(params.autostart) === "1"}
               />
             </div>
           </section>

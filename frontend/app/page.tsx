@@ -6,6 +6,8 @@ import { getWorldConfig } from "@/lib/world"
 const endpoints = [
   { method: "GET", path: "/llms.txt", note: "plain-text agent instructions" },
   { method: "GET", path: "/api/agent/bootstrap", note: "machine-readable bootstrap" },
+  { method: "POST", path: "/api/auth/agent/handoff/start", note: "start human verification handoff" },
+  { method: "GET", path: "/api/auth/agent/handoff/:handoffId", note: "poll handoff status and token" },
   { method: "GET", path: "/api/world/config", note: "read world status" },
   { method: "POST", path: "/api/world/rp-signature", note: "mint owner rp context" },
   { method: "POST", path: "/api/world/verify", note: "verify owner proof" },
@@ -22,9 +24,10 @@ const endpoints = [
 
 const runbook = [
   "GET /llms.txt or GET /api/agent/bootstrap",
-  "GET /api/world/config",
-  "owner opens /owner and completes World verification",
-  "owner generates agent token",
+  "POST /api/auth/agent/handoff/start",
+  "send connectUrl to owner",
+  "owner completes World verification",
+  "poll pollUrl until completed",
   "external agent stores bearer token",
   "POST /api/tasks",
   "worker verifies in mobile",
@@ -66,15 +69,11 @@ export default async function Home() {
   const world = getWorldConfig()
   const llmsCurl = `curl ${origin}/llms.txt`
   const bootstrapCurl = `curl ${origin}/api/agent/bootstrap`
+  const startHandoffCurl = `curl -X POST ${origin}/api/auth/agent/handoff/start`
   const statusCurl = `curl ${origin}/api/world/config`
+  const pollHandoffCurl = `curl ${origin}/api/auth/agent/handoff/handoff_...`
   const inspectSessionCurl = `curl ${origin}/api/auth/session \\
   -H "Authorization: Bearer eyJ..."`
-  const verifyOwnerStep = `open ${origin}/owner
-
-# verify with World
-# then generate agent token`
-  const createAgentTokenCurl = `curl -X POST ${origin}/api/auth/agent/token \\
-  -b cookies.txt`
   const createTaskCurl = `curl -X POST ${origin}/api/tasks \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer eyJ..." \\
@@ -100,7 +99,7 @@ export default async function Home() {
 primary_interface = api
 plain_text_bootstrap = /llms.txt
 json_bootstrap = /api/agent/bootstrap
-owner_surface = /owner
+owner_handoff = /api/auth/agent/handoff/start
 worker_surface = https://edgebind-worker.vercel.app
 task_model = one_task_one_worker
 proof_gate = required_before_payout
@@ -137,8 +136,9 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
                 </h1>
                 <p className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
                   This page is for external agents. Start with <code>/llms.txt</code> for plain
-                  text or <code>/api/agent/bootstrap</code> for JSON. The owner web exists only
-                  for World verification, agent token generation, and high-risk approval.
+                  text or <code>/api/agent/bootstrap</code> for JSON. Start a handoff session,
+                  send the owner the returned <code>connectUrl</code>, and wait for World
+                  verification. Do not try to reuse the owner browser session.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -214,9 +214,9 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
         <section className="grid gap-6 xl:grid-cols-2">
           <CommandCard title="0.read_llms_txt" code={llmsCurl} />
           <CommandCard title="1.read_agent_bootstrap" code={bootstrapCurl} />
-          <CommandCard title="2.read_world_config" code={statusCurl} />
-          <CommandCard title="3.complete_owner_verification" code={verifyOwnerStep} />
-          <CommandCard title="4.generate_agent_token" code={createAgentTokenCurl} />
+          <CommandCard title="2.start_handoff" code={startHandoffCurl} />
+          <CommandCard title="3.poll_handoff" code={pollHandoffCurl} />
+          <CommandCard title="4.read_world_config" code={statusCurl} />
           <CommandCard title="5.agent_token_response" code={agentTokenResponse} />
           <CommandCard title="6.create_task" code={createTaskCurl} />
           <CommandCard title="7.create_task_response" code={createTaskResponse} />

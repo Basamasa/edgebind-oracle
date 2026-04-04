@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   IDKitRequestWidget,
   IDKitErrorCodes,
@@ -16,6 +16,8 @@ type WorldOwnerVerifyProps = {
   rpContext: RpContext | null
   worldReady: boolean
   userId: string
+  handoffId?: string | null
+  autoStart?: boolean
 }
 
 export function WorldOwnerVerify({
@@ -25,11 +27,14 @@ export function WorldOwnerVerify({
   rpContext,
   worldReady,
   userId,
+  handoffId,
+  autoStart = false,
 }: WorldOwnerVerifyProps) {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<string>("")
   const [isPreparing, setIsPreparing] = useState(false)
   const [runtimeRpContext, setRuntimeRpContext] = useState<RpContext | null>(rpContext)
+  const autoStarted = useRef(false)
 
   async function prepareVerification() {
     if (!worldReady || !appId || !action) {
@@ -74,6 +79,7 @@ export function WorldOwnerVerify({
       body: JSON.stringify({
         rp_id: runtimeRpContext.rp_id,
         idkitResponse: result,
+        handoffId,
       }),
     })
 
@@ -92,6 +98,15 @@ export function WorldOwnerVerify({
       </div>
     )
   }
+
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || runtimeRpContext || isPreparing) {
+      return
+    }
+
+    autoStarted.current = true
+    void prepareVerification()
+  }, [autoStart, isPreparing, runtimeRpContext])
 
   return (
     <div className="space-y-4">

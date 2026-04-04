@@ -128,6 +128,16 @@ async function runBootstrap(executor: Queryable) {
         updated_at TIMESTAMPTZ NOT NULL
       )
     `,
+    `
+      CREATE TABLE IF NOT EXISTS agent_handoffs (
+        id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        token TEXT,
+        owner_id TEXT REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL,
+        completed_at TIMESTAMPTZ
+      )
+    `,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS world_nullifier TEXT`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_account_id TEXT`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_world_nullifier_idx ON users(world_nullifier) WHERE world_nullifier IS NOT NULL`,

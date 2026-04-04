@@ -666,6 +666,86 @@ export async function createProvisionalOwnerSession() {
   return user
 }
 
+export async function createAgentHandoff() {
+  const handoff = {
+    id: randomId("handoff"),
+    status: "pending",
+    token: null as string | null,
+    ownerId: null as string | null,
+    createdAt: nowIso(),
+    completedAt: null as string | null,
+  }
+
+  await dbQuery(
+    `
+      INSERT INTO agent_handoffs (id, status, token, owner_id, created_at, completed_at)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `,
+    [handoff.id, handoff.status, handoff.token, handoff.ownerId, handoff.createdAt, handoff.completedAt],
+  )
+
+  return handoff
+}
+
+export async function getAgentHandoff(handoffId: string) {
+  const result = await dbQuery<{
+    id: string
+    status: string
+    token: string | null
+    owner_id: string | null
+    created_at: string | Date
+    completed_at: string | Date | null
+  }>(
+    `SELECT * FROM agent_handoffs WHERE id = $1 LIMIT 1`,
+    [handoffId],
+  )
+
+  const row = result.rows[0]
+
+  if (!row) {
+    throw new AppError(404, "Agent handoff was not found")
+  }
+
+  return {
+    id: row.id,
+    status: row.status,
+    token: row.token,
+    ownerId: row.owner_id,
+    createdAt: toIso(row.created_at) ?? nowIso(),
+    completedAt: toIso(row.completed_at),
+  }
+}
+
+export async function completeAgentHandoff(handoffId: string, ownerId: string, token: string) {
+  const existing = await getAgentHandoff(handoffId)
+
+  if (existing.status === "completed") {
+    return existing
+  }
+
+  const completedAt = nowIso()
+
+  await dbQuery(
+    `
+      UPDATE agent_handoffs
+      SET status = 'completed',
+          token = $2,
+          owner_id = $3,
+          completed_at = $4
+      WHERE id = $1
+    `,
+    [handoffId, token, ownerId, completedAt],
+  )
+
+  return {
+    ...existing,
+    status: "completed",
+    token,
+    ownerId,
+    completedAt,
+  }
+}
+
 export async function getUserProfile(userId: string) {
   return findUser(userId)
 }

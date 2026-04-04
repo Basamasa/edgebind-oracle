@@ -57,7 +57,8 @@ export function AgentTokenPanel() {
       <h2 className="font-mono text-sm uppercase tracking-[0.18em] text-[#4e473d]">Agent Access</h2>
       <div className="mt-4 rounded-[20px] border border-black/10 bg-white p-4">
         <div className="font-mono text-xs leading-7 text-[#302a24]">
-          generate bearer token from current verified owner session
+          Verify once, then paste this token into the external agent. The agent should call the
+          API with `Authorization: Bearer ...`.
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
@@ -83,6 +84,10 @@ export function AgentTokenPanel() {
 {`authorization = Bearer ${token}`}
           </pre>
         ) : null}
+
+        <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-[#756b5e]">
+          human_handoff = copy token =&gt; paste into agent chat
+        </div>
 
         {status ? (
           <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-[#756b5e]">

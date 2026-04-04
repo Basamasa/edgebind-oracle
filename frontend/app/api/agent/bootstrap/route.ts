@@ -14,13 +14,19 @@ export async function GET(request: NextRequest) {
     workerSurface: "https://edgebind-worker.vercel.app",
     auth: {
       mode: "verified_owner_bearer",
+      humanHandoffMode: "device_link",
       ownerVerification: "world",
       tokenRoute: `${origin}/api/auth/agent/token`,
+      handoffStartRoute: `${origin}/api/auth/agent/handoff/start`,
       header: "Authorization: Bearer <token>",
+      externalAgentCanUseOwnerBrowserSession: false,
+      ifTokenMissing:
+        "start handoff, give the human connectUrl, wait for World verification, then poll for token",
       steps: [
-        "human owner opens /owner",
+        "POST /api/auth/agent/handoff/start",
+        "give connectUrl to human owner",
         "human owner completes World verification",
-        "human owner generates bearer token",
+        "poll pollUrl until completed",
         "external agent stores bearer token",
       ],
     },
@@ -41,6 +47,12 @@ export async function GET(request: NextRequest) {
       approveTask: { method: "POST", path: "/api/tasks/:taskId/approve" },
     },
     example: {
+      handoff: {
+        start: {
+          method: "POST",
+          path: "/api/auth/agent/handoff/start",
+        },
+      },
       createTask: {
         headers: {
           Authorization: "Bearer <token>",

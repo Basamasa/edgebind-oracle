@@ -3,13 +3,15 @@ import { hashSignal } from "@worldcoin/idkit/hashing"
 import { NextRequest, NextResponse } from "next/server"
 
 import { AppError, toErrorResponse } from "@/lib/server/errors"
-import { requireSessionRole, setSession } from "@/lib/server/session"
+import { createSessionToken, requireSessionRole, setSession } from "@/lib/server/session"
+import { completeAgentHandoff } from "@/lib/server/task-service"
 import { markUserHumanVerified } from "@/lib/server/task-service"
 import { getWorldConfig } from "@/lib/world"
 
 type VerifyPayload = {
   rp_id?: string
   idkitResponse?: IDKitResult
+  handoffId?: string
 }
 
 type WorldVerifyResponse = {
@@ -31,6 +33,7 @@ export async function POST(request: NextRequest) {
     const payload = (await request.json()) as VerifyPayload
     const rpId = payload.rp_id?.trim()
     const result = payload.idkitResponse
+    const handoffId = payload.handoffId?.trim()
 
     if (!rpId || !result) {
       throw new AppError(400, "rp_id and idkitResponse are required")
@@ -67,6 +70,10 @@ export async function POST(request: NextRequest) {
 
     const updatedUser = await markUserHumanVerified(sessionUser.id)
     await setSession(updatedUser)
+
+    if (handoffId) {
+      await completeAgentHandoff(handoffId, updatedUser.id, createSessionToken(updatedUser))
+    }
 
     return NextResponse.json({
       ok: true,
