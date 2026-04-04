@@ -54,6 +54,13 @@ export interface TaskRecord {
         }
       | null
   } | null
+  validation: {
+    valid: boolean
+    reason: string
+    requiresApproval: boolean
+    agentDecision: string | null
+    createdAt: string
+  } | null
   payout: {
     status: string
     amount: number

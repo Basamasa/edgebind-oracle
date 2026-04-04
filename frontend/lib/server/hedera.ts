@@ -76,10 +76,18 @@ export async function transferHbarPayout(input: {
 
   let operatorKey
 
-  try {
-    operatorKey = PrivateKey.fromStringED25519(config.operatorPrivateKey)
-  } catch {
-    operatorKey = PrivateKey.fromStringECDSA(config.operatorPrivateKey)
+  if (config.operatorPrivateKey.startsWith("0x")) {
+    try {
+      operatorKey = PrivateKey.fromStringECDSA(config.operatorPrivateKey)
+    } catch {
+      operatorKey = PrivateKey.fromStringED25519(config.operatorPrivateKey)
+    }
+  } else {
+    try {
+      operatorKey = PrivateKey.fromStringED25519(config.operatorPrivateKey)
+    } catch {
+      operatorKey = PrivateKey.fromStringECDSA(config.operatorPrivateKey)
+    }
   }
 
   client.setOperator(operatorId, operatorKey)

@@ -49,6 +49,7 @@ export default function App() {
   const [clock, setClock] = useState(new Date().toLocaleTimeString())
   const [err, setErr] = useState('')
   const [historyCount, setHistoryCount] = useState(0)
+  const [resultTask, setResultTask] = useState<TaskRecord | null>(null)
 
   const [appMode, setAppMode] = useState<AppMode>(loadSettings().mode)
   const [backendUrl, setBackendUrl] = useState(loadSettings().backendUrl)
@@ -56,6 +57,25 @@ export default function App() {
   const workerId = session?.user.id ?? null
   const requiresPhoto = request?.proofType === 'photo' || request?.proofType === 'photo_location'
   const requiresLocation = request?.proofType === 'location' || request?.proofType === 'photo_location'
+
+  const refreshOpenTasks = useCallback(() => {
+    if (!workerId || isDemo) {
+      return Promise.resolve()
+    }
+
+    return fetchOpenTasks(backendUrl)
+      .then((tasks) => {
+        setRequests(tasks.map(mapTask).filter(Boolean) as Request[])
+        setErr((current) => (current === 'Failed to load live tasks' ? '' : current))
+      })
+      .catch((error) => {
+        setRequests([])
+        setErr(error instanceof Error ? error.message : 'Failed to load live tasks')
+      })
+  }, [backendUrl, isDemo, workerId])
+
+  const validationMessage = resultTask?.validation?.reason ?? ''
+  const resultStatus = resultTask?.status ?? null
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -78,13 +98,22 @@ export default function App() {
       return
     }
 
-    fetchOpenTasks(backendUrl)
-      .then((tasks) => setRequests(tasks.map(mapTask).filter(Boolean) as Request[]))
-      .catch((error) => {
-        setRequests([])
-        setErr(error instanceof Error ? error.message : 'Failed to load live tasks')
-      })
-  }, [backendUrl, isDemo, workerId])
+    void refreshOpenTasks()
+  }, [refreshOpenTasks, backendUrl, isDemo, workerId])
+
+  useEffect(() => {
+    if (!workerId || isDemo) {
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refreshOpenTasks()
+      }
+    }, 8000)
+
+    return () => window.clearInterval(timer)
+  }, [isDemo, refreshOpenTasks, workerId])
 
   const startCam = useCallback(async () => {
     try {
@@ -122,6 +151,7 @@ export default function App() {
     setScreen('ready')
     setPhoto(null)
     setErr('')
+    setResultTask(null)
     setView('capture')
 
     if (isDemo || !session) {
@@ -141,6 +171,7 @@ export default function App() {
     setScreen('ready')
     setPhoto(null)
     setErr('')
+    setResultTask(null)
   }
 
   const capture = () => {
@@ -182,18 +213,20 @@ export default function App() {
 
     setScreen('submitting')
 
-    const saveEntry = () => saveToHistory(workerId ?? '', {
+    const saveEntry = (taskResult?: TaskRecord | null) => saveToHistory(workerId ?? '', {
       requestId: request.taskId,
       description: request.description,
       lat: coords?.lat ?? 0,
       lng: coords?.lng ?? 0,
       ts,
       photo: photo ?? '',
+      outcome: resultTaskLabel(taskResult?.status),
+      reason: resultTaskReason(taskResult ?? null),
     })
 
     if (isDemo) {
       setTimeout(() => {
-        saveEntry()
+        saveEntry(null)
         setScreen('success')
       }, 1500)
       return
@@ -206,7 +239,7 @@ export default function App() {
     }
 
     try {
-      await submitTaskProof(backendUrl, session.token, request.taskId, {
+      const submittedTask = await submitTaskProof(backendUrl, session.token, request.taskId, {
         requestCode: request.requestCode,
         imageDataUrl: photo ?? undefined,
         latitude: coords?.lat,
@@ -214,8 +247,9 @@ export default function App() {
         accuracyMeters: coords?.accuracy,
       })
 
-      saveEntry()
-      setRequests((current) => current.filter((entry) => entry.taskId !== request.taskId))
+      setResultTask(submittedTask)
+      saveEntry(submittedTask)
+      void refreshOpenTasks()
       setScreen('success')
     } catch (error) {
       setErr(error instanceof Error ? error.message : 'Submission failed')
@@ -387,10 +421,21 @@ export default function App() {
         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>Proof submitted</div>
-        <div style={{ fontSize: '14px', color: '#666', textAlign: 'center', marginBottom: '32px', lineHeight: 1.6 }}>
-          The runtime received your evidence and updated validation and payout state.
+        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>
+          {resultTaskLabel(resultStatus)}
         </div>
+        <div style={{ fontSize: '14px', color: '#666', textAlign: 'center', marginBottom: '18px', lineHeight: 1.6, maxWidth: '320px' }}>
+          {resultTaskSummary(resultTask)}
+        </div>
+        {resultTask ? (
+          <div style={{ ...card, width: '100%', maxWidth: '360px', marginBottom: '28px', border: resultStatus === 'rejected' ? '0.5px solid rgba(248,113,113,0.3)' : '0.5px solid #1e1e1e' }}>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <ResultRow label="Status" value={resultTaskLabel(resultStatus)} />
+              <ResultRow label="Reason" value={validationMessage || 'No runtime note'} />
+              <ResultRow label="Payout" value={resultTask.payout?.status ?? 'Not started'} />
+            </div>
+          </div>
+        ) : null}
         <button style={gradientBtn} onClick={() => { setView('list'); setScreen('ready'); setPhoto(null); setErr('') }}>
           Back to tasks
         </button>
@@ -408,6 +453,48 @@ export default function App() {
         <button style={{ ...ghostBtn, flex: 1 }} onClick={retake}>Retake</button>
         <button style={{ ...gradientBtn, flex: 1 }} onClick={backToList}>Back to tasks</button>
       </div>
+    </div>
+  )
+}
+
+function resultTaskLabel(status: string | null | undefined) {
+  if (status === 'rejected') return 'Proof rejected'
+  if (status === 'paid') return 'Proof accepted'
+  if (status === 'pending_approval') return 'Awaiting approval'
+  if (status === 'submitted') return 'Proof submitted'
+  return 'Proof updated'
+}
+
+function resultTaskReason(task: TaskRecord | null) {
+  if (!task) return ''
+  return task.validation?.reason ?? ''
+}
+
+function resultTaskSummary(task: TaskRecord | null) {
+  if (!task) {
+    return 'The runtime received your evidence and updated validation and payout state.'
+  }
+
+  if (task.status === 'rejected') {
+    return task.validation?.reason || 'The runtime rejected this proof.'
+  }
+
+  if (task.status === 'pending_approval') {
+    return task.validation?.reason || 'Proof passed checks and now waits for manual approval.'
+  }
+
+  if (task.status === 'paid') {
+    return task.validation?.reason || 'Proof passed checks and payout moved forward.'
+  }
+
+  return task.validation?.reason || 'The runtime received your evidence and updated validation and payout state.'
+}
+
+function ResultRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'baseline', borderBottom: '0.5px solid #1a1a1a', paddingBottom: '8px' }}>
+      <span style={{ fontSize: '12px', color: '#666' }}>{label}</span>
+      <span style={{ fontSize: '13px', color: '#f0f0f0', textAlign: 'right', maxWidth: '210px' }}>{value}</span>
     </div>
   )
 }

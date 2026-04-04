@@ -9,6 +9,8 @@ export interface HistoryEntry {
   lng: number
   ts: string
   photo: string
+  outcome?: string
+  reason?: string
 }
 
 // key by stable worker id so each verified human keeps separate local history
@@ -122,6 +124,8 @@ export default function History({ onBack, user, onSignOut }: Props) {
                 <img src={e.photo} alt="proof" style={{ width: '100%', borderRadius: '8px', marginBottom: '12px', display: 'block' }} />
                 {[
                   { label: 'Request ID', value: e.requestId, mono: true },
+                  { label: 'Outcome', value: e.outcome ?? 'submitted' },
+                  { label: 'Reason', value: e.reason ?? 'No runtime note' },
                   { label: 'Latitude', value: e.lat.toFixed(6) },
                   { label: 'Longitude', value: e.lng.toFixed(6) },
                   { label: 'Submitted', value: new Date(e.ts).toLocaleString() },

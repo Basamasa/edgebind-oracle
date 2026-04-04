@@ -6,6 +6,7 @@ import { signInWorkerAction, signOutAction } from "@/app/auth/actions"
 import { formatDate, formatMoney, toQueryString } from "@/lib/format"
 import { getSessionUser } from "@/lib/server/session"
 import { listTasks, listUsers } from "@/lib/server/task-service"
+import { LiveRefresh } from "@/components/live-refresh"
 
 import { acceptTaskAction, submitTaskAction } from "../work/actions"
 
@@ -68,6 +69,7 @@ export default async function WorkerPage({
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,#1f3024,transparent_30%),linear-gradient(180deg,#03110a,#020705)] px-6 py-8 text-[#f5f5ed] md:px-12">
+      <LiveRefresh intervalMs={8000} />
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <header className="flex flex-col gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">

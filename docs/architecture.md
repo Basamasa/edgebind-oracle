@@ -1,40 +1,51 @@
 # Architecture
 
-Open `docs/architecture.html` for the SVG version.
+Open `docs/architecture.html` for the visual graph.
+
+## System
 
 ```mermaid
 flowchart TD
     World{{World<br/>verified humans}}
     Owner[Owner web<br/>human-backed agent]
-    Runtime[frontend / Next.js runtime<br/>task API + validation + risk routing]
-    Worker[Worker mobile<br/>accept task + submit proof]
-    Ledger[Ledger<br/>manual approval<br/>high-risk only]
+    Runtime[Next.js runtime<br/>API + validation + payout routing]
+    DB[(Postgres)]
+    Worker[Worker mobile<br/>verified human]
+    Ledger[Ledger<br/>manual approval]
     Hedera[Hedera<br/>payout rail]
 
     World -. verifies .-> Owner
     World -. verifies .-> Worker
 
-    Owner -->|create task| Runtime
-    Runtime -->|status| Owner
-
-    Runtime -->|task feed| Worker
-    Worker -->|accept + proof| Runtime
-
+    Owner -->|create task / approve| Runtime
+    Worker -->|accept / submit proof| Runtime
+    Runtime <--> DB
     Runtime -->|low-risk payout| Hedera
     Runtime -->|high-risk review| Ledger
     Ledger -->|approved payout| Hedera
+    Runtime -->|status| Owner
+    Runtime -->|task feed + result| Worker
 ```
+
+## Lifecycle
 
 ```mermaid
 flowchart LR
-    open[open] --> accepted[accepted] --> submitted[submitted]
-    submitted -->|low-risk| paid[paid]
-    submitted -->|high-risk| pending[pending_approval]
+    open[open] --> accepted[accepted]
+    accepted --> submitted[submitted]
+    submitted -->|valid + low risk| paid[paid]
+    submitted -->|valid + high risk| pending[pending approval]
     pending --> paid
     submitted -->|invalid| rejected[rejected]
 ```
 
+## Notes
+
 - `frontend` = owner web app + shared Next.js runtime
 - `mobile` = worker app
+- `1 task -> 1 worker`
 - no separate backend app
-- `0G` is out of scope
+- World = human verification
+- Hedera = payout rail
+- Ledger = manual approval for high-risk only
+- proof validation is currently rules-based
