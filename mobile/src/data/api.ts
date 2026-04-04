@@ -1,4 +1,10 @@
-import type { TaskRecord, WorkerSession, WorkerSummary } from './types'
+import type {
+  TaskRecord,
+  WorkerSession,
+  WorkerSummary,
+  WorldPrepareResponse,
+  WorldVerifyPayload,
+} from './types'
 
 function authHeaders(token?: string) {
   const headers = new Headers()
@@ -33,6 +39,40 @@ export async function signInWorker(baseUrl: string, userId: string) {
 
   if (!response.ok || !('token' in payload)) {
     throw new Error((payload as { error?: string }).error ?? 'Worker sign-in failed')
+  }
+
+  return payload
+}
+
+export async function prepareWorldWorkerVerification(baseUrl: string, userId: string) {
+  const response = await fetch(`${baseUrl}/api/auth/mobile/worker/world/prepare`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId }),
+  })
+  const payload = (await response.json()) as WorldPrepareResponse | { error?: string }
+
+  if (!response.ok || !('rp_context' in payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to prepare World verification')
+  }
+
+  return payload
+}
+
+export async function verifyWorldWorker(baseUrl: string, body: WorldVerifyPayload) {
+  const response = await fetch(`${baseUrl}/api/auth/mobile/worker/world/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  const payload = (await response.json()) as WorkerSession | { error?: string }
+
+  if (!response.ok || !('token' in payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'World worker verification failed')
   }
 
   return payload

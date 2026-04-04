@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
+import {
+  IDKitErrorCodes,
+  IDKitRequestWidget,
+  orbLegacy,
+  type IDKitResult,
+  type RpContext,
+} from '@worldcoin/idkit'
 import { GRADIENT } from '../data/mock'
 import { page, gradientBtn } from '../data/styles'
-import { fetchWorkers, signInWorker } from '../data/api'
+import { fetchWorkers, prepareWorldWorkerVerification, verifyWorldWorker } from '../data/api'
 import { loadSettings } from '../data/settings'
-import type { WorkerSession, WorkerSummary } from '../data/types'
+import type { WorkerSession, WorkerSummary, WorldPrepareResponse } from '../data/types'
 
 interface Props {
   onLogin: (session: WorkerSession) => void
@@ -15,6 +22,8 @@ export default function Login({ onLogin }: Props) {
   const [loading, setLoading] = useState(true)
   const [signingIn, setSigningIn] = useState(false)
   const [err, setErr] = useState('')
+  const [worldOpen, setWorldOpen] = useState(false)
+  const [worldPrepare, setWorldPrepare] = useState<WorldPrepareResponse | null>(null)
   const settings = loadSettings()
 
   useEffect(() => {
@@ -54,12 +63,30 @@ export default function Login({ onLogin }: Props) {
     try {
       setSigningIn(true)
       setErr('')
-      onLogin(await signInWorker(settings.backendUrl, worker.id))
+      const prepared = await prepareWorldWorkerVerification(settings.backendUrl, worker.id)
+      setWorldPrepare(prepared)
+      setWorldOpen(true)
     } catch (error) {
-      setErr(error instanceof Error ? error.message : 'Worker sign-in failed')
+      setErr(error instanceof Error ? error.message : 'World worker verification failed')
     } finally {
       setSigningIn(false)
     }
+  }
+
+  const handleWorldVerify = async (result: IDKitResult) => {
+    const worker = workers.find((entry) => entry.id === selectedId)
+
+    if (!worker || !worldPrepare) {
+      throw new Error('Worker verification context is missing')
+    }
+
+    const session = await verifyWorldWorker(settings.backendUrl, {
+      userId: worker.id,
+      rp_id: worldPrepare.rp_context.rp_id,
+      idkitResponse: result,
+    })
+
+    onLogin(session)
   }
 
   const input: React.CSSProperties = {
@@ -110,7 +137,7 @@ export default function Login({ onLogin }: Props) {
           </div>
         )}
         <button style={gradientBtn} onClick={submit} disabled={loading || signingIn}>
-          {loading ? 'Loading workers...' : signingIn ? 'Signing in...' : 'Continue'}
+          {loading ? 'Loading workers...' : signingIn ? 'Preparing World...' : settings.mode === 'demo' ? 'Continue' : 'Verify with World'}
         </button>
 
         <div style={{ marginTop: '24px', background: '#0f0f0f', border: '0.5px solid #1e1e1e', borderRadius: '10px', padding: '14px 16px' }}>
@@ -125,6 +152,30 @@ export default function Login({ onLogin }: Props) {
           </div>
         </div>
       </div>
+
+      {settings.mode === 'live' && worldPrepare ? (
+        <IDKitRequestWidget
+          open={worldOpen}
+          onOpenChange={setWorldOpen}
+          app_id={worldPrepare.app_id}
+          action={worldPrepare.action}
+          rp_context={worldPrepare.rp_context as RpContext}
+          allow_legacy_proofs={true}
+          preset={orbLegacy({ signal: selectedId })}
+          environment={worldPrepare.environment}
+          handleVerify={handleWorldVerify}
+          onSuccess={() => {
+            setWorldOpen(false)
+          }}
+          onError={(errorCode) => {
+            setErr(
+              errorCode === IDKitErrorCodes.UserRejected
+                ? 'World verification was canceled.'
+                : `World verification failed: ${errorCode}`,
+            )
+          }}
+        />
+      ) : null}
     </div>
   )
 }

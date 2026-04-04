@@ -122,7 +122,7 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
               type="text"
               value={backendUrl}
               onChange={e => { setBackendUrl(e.target.value); setPingResult(null) }}
-              placeholder="https://frontend-wheat-one-84.vercel.app"
+              placeholder="https://edgebind-web.vercel.app"
             />
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button

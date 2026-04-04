@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "https://edgebind-worker-self.vercel.app",
   "https://edgebind-worker.vercel.app",
   "https://edgebind-mobile.vercel.app",
   "https://edgebind-mobile-self.vercel.app",

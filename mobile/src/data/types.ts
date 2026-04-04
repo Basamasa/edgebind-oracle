@@ -1,3 +1,5 @@
+import type { IDKitResult, RpContext } from '@worldcoin/idkit'
+
 export interface WorkerSummary {
   id: string
   name: string
@@ -9,6 +11,20 @@ export interface WorkerSession {
   ok: true
   token: string
   user: WorkerSummary
+}
+
+export interface WorldPrepareResponse {
+  app_id: `app_${string}`
+  action: string
+  environment: 'production' | 'staging'
+  user: WorkerSummary
+  rp_context: RpContext
+}
+
+export interface WorldVerifyPayload {
+  userId: string
+  rp_id: string
+  idkitResponse: IDKitResult
 }
 
 export interface TaskRecord {

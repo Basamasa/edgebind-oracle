@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { signRequest } from "@worldcoin/idkit/signing"
 
 import { corsPreflight, withCors } from "@/lib/server/cors"
 import { AppError, toErrorResponse } from "@/lib/server/errors"
-import { createSessionToken } from "@/lib/server/session"
 import { listUsers } from "@/lib/server/task-service"
+import { getWorldConfig } from "@/lib/world"
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request)
@@ -11,18 +12,17 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (process.env.NODE_ENV === "production") {
-      throw new AppError(
-        403,
-        "Direct mobile worker sign-in is disabled in production. Use World verification.",
-      )
-    }
-
     const payload = await request.json().catch(() => ({}))
     const userId = String(payload.userId ?? "").trim()
 
     if (!userId) {
       throw new AppError(400, "userId is required")
+    }
+
+    const config = getWorldConfig()
+
+    if (!config.appId || !config.action || !config.rpId || !config.rpSigningKey) {
+      throw new AppError(503, "World verification is not configured yet")
     }
 
     const users = await listUsers("worker")
@@ -32,16 +32,27 @@ export async function POST(request: NextRequest) {
       throw new AppError(404, `Worker ${userId} was not found`)
     }
 
-    if (!user.isHumanVerified) {
-      throw new AppError(403, "Only verified worker accounts can use the mobile app")
-    }
+    const signature = signRequest(config.action, config.rpSigningKey)
 
     return withCors(
       request,
       NextResponse.json({
-        ok: true,
-        token: createSessionToken(user),
-        user,
+        app_id: config.appId,
+        action: config.action,
+        environment: config.environment,
+        user: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          isHumanVerified: user.isHumanVerified,
+        },
+        rp_context: {
+          rp_id: config.rpId,
+          nonce: signature.nonce,
+          created_at: signature.createdAt,
+          expires_at: signature.expiresAt,
+          signature: signature.sig,
+        },
       }),
     )
   } catch (error) {
