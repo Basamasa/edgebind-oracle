@@ -1,56 +1,71 @@
 <p align="center">
-  <img src="./image/logo.png" alt="Edgebind logo" width="120" />
+  <img src="./image/logo.png" alt="Edgebind logo" width="108" />
 </p>
 
 <p align="center">
-  <img src="./image/long-logo.png" alt="Edgebind wordmark" width="420" />
+  <img src="./image/long-logo.png" alt="Edgebind" width="460" />
 </p>
 
-<h1 align="center">Edgebind Oracle</h1>
+<p align="center">
+  Human-backed AI task execution with proof-gated payouts.
+</p>
 
-<p align="center">Human-backed AI task execution with proof-gated payouts.</p>
+<p align="center">
+  <a href="https://edgebind-web.vercel.app">Owner Web</a>
+  ·
+  <a href="https://edgebind-worker.vercel.app">Worker App</a>
+  ·
+  <a href="./docs/architecture.md">Architecture</a>
+</p>
+
+## Overview
 
 Edgebind turns real-world tasks into proof-based payouts for AI agents.
 
-It is not a marketplace. An owner or human-backed agent creates a task, a verified human worker executes it, the runtime validates submitted proof, and payout only moves after that proof passes the system rules.
+This project is not a marketplace. A human-backed agent or owner creates a task, a verified human worker executes it, the runtime validates submitted proof, and payout only moves after that proof passes the system rules.
 
-Live:
-- owner web + shared runtime: `https://edgebind-web.vercel.app`
-- worker app: `https://edgebind-worker.vercel.app`
+The current system is built around a simple execution model:
+- `1 task -> 1 verified worker`
+- proof before payout
+- low-risk auto-release
+- high-risk manual approval
 
-## What It Does
+## Why It Exists
 
-- owner creates a task in the web control plane or through the API
-- verified human worker accepts exactly one task
-- worker submits proof
-- backend validates the submission
-- low-risk payouts auto-release
-- high-risk payouts wait for manual approval
-- Hedera is the payout rail
-- World is the human verification layer
-- Ledger is the manual approval layer for high-risk payouts only
+Most task systems stop at posting work. Edgebind is designed to enforce the execution loop:
 
-## Current Product Shape
+- create a structured task
+- bind it to verified humans
+- require proof
+- validate proof in the runtime
+- route payout only after that proof step
 
-- `1 task -> 1 worker`
-- no marketplace bidding
-- no multi-worker slots
-- no separate backend service
-- owner web and backend share one Next.js runtime
-- mobile talks to that same runtime over API
+That makes it a base layer for AI-to-human execution, not a job board.
 
-## Stack
+## Current Product
 
-- web/runtime: Next.js App Router + TypeScript
-- mobile: React + TypeScript + Vite
-- database: Postgres
-- identity: World ID
-- payout rail: Hedera
-- deploy: Vercel
+### Owner side
+- World-verified owner flow
+- owner web control plane
+- API-first task creation path
+- manual approval for high-risk payouts
+
+### Worker side
+- World-verified worker identity
+- mobile worker app
+- accept one task
+- submit proof
+- view result and payout state
+
+### Runtime
+- task orchestration
+- proof validation
+- risk routing
+- payout execution
+- rejection reasons surfaced in UI
+- automatic refresh on web and mobile task surfaces
 
 ## Architecture
-
-Current target architecture:
 
 ```mermaid
 flowchart TD
@@ -59,7 +74,7 @@ flowchart TD
     Runtime[Next.js runtime<br/>API + validation + payout routing]
     DB[(Postgres)]
     Worker[Worker mobile<br/>verified human]
-    Ledger[Ledger<br/>manual approval]
+    Approval[Manual approval<br/>inside runtime]
     Hedera[Hedera<br/>payout rail]
 
     World -. verifies .-> Owner
@@ -69,8 +84,8 @@ flowchart TD
     Worker -->|accept / submit proof| Runtime
     Runtime <--> DB
     Runtime -->|low-risk payout| Hedera
-    Runtime -->|high-risk review| Ledger
-    Ledger -->|approved payout| Hedera
+    Runtime -->|high-risk review| Approval
+    Approval -->|approved payout| Hedera
     Runtime -->|live status| Owner
     Runtime -->|task feed + result| Worker
 ```
@@ -87,51 +102,50 @@ flowchart LR
     submitted -->|invalid| rejected[rejected]
 ```
 
-Visual graph:
+More detail:
+- [docs/architecture.md](./docs/architecture.md)
 - [docs/architecture.html](./docs/architecture.html)
 
-## Workflow
+## Stack
 
-1. owner verifies with World
-2. owner creates task
-3. task is stored in Postgres
-4. worker verifies with World in the mobile app
-5. worker accepts one open task
-6. worker submits proof
-7. runtime validates the submission
-8. payout auto-releases or moves to approval
-9. result appears in both owner and worker surfaces
+| Layer | Technology |
+| --- | --- |
+| Owner web + shared runtime | Next.js App Router, TypeScript |
+| Worker app | React, TypeScript, Vite |
+| Database | Postgres |
+| Human verification | World ID |
+| Payout rail | Hedera |
+| Hosting | Vercel |
 
 ## What Is Live Now
 
 - owner World verification
 - worker World verification
-- owner task creation
-- worker task acceptance
+- task creation
+- task acceptance
 - proof submission
 - rules-based validation
-- rejection reasons visible in UI
-- high-risk manual approval flow
-- Hedera payout integration in the runtime
-- worker Hedera payout account profile
-- automatic live refresh on web and mobile task surfaces
+- low-risk auto-release path
+- high-risk approval path
+- worker payout profile for Hedera account IDs
+- live deployed owner and worker surfaces
 
-## Important Current Limitation
+## Important Limitation
 
 Proof validation is currently rules-based.
 
 Today the runtime checks things like:
 - assigned worker
 - request code
-- required fields
+- required proof fields
 - location match
 - payout risk threshold
 
-It does not yet do deep AI vision validation of image content. For now, high-risk or uncertain cases should go through manual approval.
+It does not yet perform deep AI vision validation of image content. For now, uncertain or high-risk cases should go through manual approval.
 
-## API
+## API Surface
 
-Main routes:
+Core routes:
 
 - `GET /api/auth/session`
 - `POST /api/world/verify`
@@ -143,41 +157,41 @@ Main routes:
 - `POST /api/tasks/:taskId/approve`
 - `GET /api/users`
 
-The worker mobile app uses the same runtime through:
+Worker mobile routes:
 
 - `POST /api/auth/mobile/worker/world/prepare`
 - `POST /api/auth/mobile/worker/world/verify`
 - `GET /api/auth/mobile/worker/profile`
 - `POST /api/auth/mobile/worker/profile`
 
-## Project Layout
+## Repository Layout
 
-Current active path:
-
-- `frontend/` owner web app + shared Next.js runtime
+- `frontend/` owner web app and shared Next.js runtime
 - `mobile/` worker app
-- `docs/` architecture and project docs
+- `docs/` architecture and supporting docs
+- `image/` brand assets used in the README
 
-Repo note:
-- older experiment directories still exist in the repo, but the current target architecture is `frontend + mobile + shared runtime`
+Note:
+- older experiment directories still exist in the repo
+- the current target architecture is `frontend + mobile + shared runtime`
 
 ## Local Development
 
-Web runtime:
+Install and run the web runtime:
 
 ```bash
 npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Worker app:
+Install and run the worker app:
 
 ```bash
 npm --prefix mobile install
 npm --prefix mobile run dev
 ```
 
-Tests:
+Verification:
 
 ```bash
 npm --prefix frontend run test
@@ -187,13 +201,11 @@ npm --prefix mobile run build
 
 ## Environment
 
-Core runtime:
-
+Core:
 - `DATABASE_URL`
 - `SESSION_SECRET`
 
 World:
-
 - `WORLD_APP_ID`
 - `WORLD_ACTION_ID`
 - `WORLD_RP_ID`
@@ -201,7 +213,6 @@ World:
 - optional `WORLD_ENVIRONMENT`
 
 Hedera:
-
 - `HEDERA_OPERATOR_ACCOUNT_ID`
 - `HEDERA_OPERATOR_PRIVATE_KEY`
 - optional `HEDERA_NETWORK`
@@ -209,12 +220,12 @@ Hedera:
 
 ## Status
 
-This repo already proves the core product loop:
+Edgebind already proves the core loop:
 
-- verified owner creates task
-- verified worker executes task
-- proof gates payout
-- low-risk can auto-release
-- high-risk can require approval
+1. a verified owner creates a task
+2. a verified worker executes it
+3. proof is required
+4. the runtime decides payout routing
+5. payout only moves after the proof step
 
-That makes Edgebind a working base for human-backed AI task execution, not a task marketplace.
+That makes the repo a working foundation for human-backed AI task execution.

@@ -182,12 +182,12 @@
       <p class="lead">
         Human-backed AI task execution. The owner web and backend share one Next.js runtime.
         Verified humans come through World. Payouts route through Hedera. High-risk releases
-        escalate to Ledger.
+        escalate to a manual approval layer inside the runtime.
       </p>
 
       <section class="panel" aria-labelledby="system-graph">
         <h2 id="system-graph" class="panel-title">System Graph</h2>
-        <svg viewBox="0 0 1240 700" role="img" aria-label="Architecture graph showing owner web, worker mobile, shared Next.js runtime, Postgres, World, Ledger, and Hedera.">
+        <svg viewBox="0 0 1240 700" role="img" aria-label="Architecture graph showing owner web, worker mobile, shared Next.js runtime, Postgres, World, manual approval, and Hedera.">
           <defs>
             <marker id="arrow-owner" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
               <path d="M0,1 L8,5 L0,9" fill="none" stroke="var(--owner)" stroke-width="1.8" stroke-linecap="round" />
@@ -248,7 +248,7 @@
           <text x="263" y="649" text-anchor="middle" font-size="22" font-weight="640" fill="var(--ink)">Payout rail</text>
 
           <rect x="858" y="596" width="238" height="76" rx="38" fill="#fdf4f6" stroke="var(--ledger)" stroke-width="1.6" />
-          <text x="977" y="624" text-anchor="middle" font-size="11" font-family="'SF Mono','IBM Plex Mono',monospace" letter-spacing="0.16em" text-transform="uppercase" fill="var(--ledger)">Ledger</text>
+          <text x="977" y="624" text-anchor="middle" font-size="11" font-family="'SF Mono','IBM Plex Mono',monospace" letter-spacing="0.16em" text-transform="uppercase" fill="var(--ledger)">Approval</text>
           <text x="977" y="649" text-anchor="middle" font-size="22" font-weight="640" fill="var(--ink)">Manual approval</text>
 
           <path d="M512 118 C420 150 332 184 246 194" fill="none" stroke="var(--world)" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#arrow-world)" />
@@ -289,7 +289,7 @@
           <div class="legend-item"><span class="swatch" style="background: var(--worker)"></span>Worker Mobile</div>
           <div class="legend-item"><span class="swatch" style="background: var(--db)"></span>Postgres</div>
           <div class="legend-item"><span class="swatch" style="background: var(--hedera)"></span>Hedera</div>
-          <div class="legend-item"><span class="swatch" style="background: var(--ledger)"></span>Ledger</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--ledger)"></span>Approval</div>
         </div>
       </section>
 
@@ -355,8 +355,8 @@
             <div class="note-value">Proof validation is rules-based today.</div>
           </div>
           <div class="note">
-            <div class="note-key">Role of Ledger</div>
-            <div class="note-value">Used only for high-risk manual approval.</div>
+            <div class="note-key">Manual Approval</div>
+            <div class="note-value">Lives inside the runtime and is used only for high-risk payout release.</div>
           </div>
         </div>
       </section>

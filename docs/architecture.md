@@ -11,7 +11,7 @@ flowchart TD
     Runtime[Next.js runtime<br/>API + validation + payout routing]
     DB[(Postgres)]
     Worker[Worker mobile<br/>verified human]
-    Ledger[Ledger<br/>manual approval]
+    Approval[Manual approval<br/>inside runtime]
     Hedera[Hedera<br/>payout rail]
 
     World -. verifies .-> Owner
@@ -21,8 +21,8 @@ flowchart TD
     Worker -->|accept / submit proof| Runtime
     Runtime <--> DB
     Runtime -->|low-risk payout| Hedera
-    Runtime -->|high-risk review| Ledger
-    Ledger -->|approved payout| Hedera
+    Runtime -->|high-risk review| Approval
+    Approval -->|approved payout| Hedera
     Runtime -->|status| Owner
     Runtime -->|task feed + result| Worker
 ```
@@ -47,5 +47,5 @@ flowchart LR
 - no separate backend app
 - World = human verification
 - Hedera = payout rail
-- Ledger = manual approval for high-risk only
+- manual approval lives inside the runtime today
 - proof validation is currently rules-based
