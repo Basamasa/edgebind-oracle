@@ -22,7 +22,7 @@ export default function Home() {
         <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.24em] text-[#8ea38d]">
-              World verified. Hedera payouts. Ledger approvals.
+              Verified workers. Conditional payouts. Manual approval for high-risk tasks.
             </p>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight md:text-7xl">
               Agents create tasks. Verified humans complete them. The system routes payout.

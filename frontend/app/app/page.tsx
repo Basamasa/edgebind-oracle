@@ -1,9 +1,13 @@
 import Link from "next/link"
 import { unstable_noStore as noStore } from "next/cache"
+import type { ReactNode } from "react"
+
+import { signInOwnerAction, signOutAction } from "@/app/auth/actions"
+import { formatDate, formatMoney, toQueryString } from "@/lib/format"
+import { getSessionUser } from "@/lib/server/session"
+import { listOwnerTasks, listUsers } from "@/lib/server/task-service"
 
 import { approveTaskAction, createTaskAction } from "./actions"
-import { formatDate, formatMoney, toQueryString } from "@/lib/format"
-import { listOwnerTasks, listUsers } from "@/lib/server/task-service"
 
 function getValue(value: string | string[] | undefined, fallback = "") {
   if (Array.isArray(value)) {
@@ -21,14 +25,26 @@ export default async function AppPage({
   noStore()
 
   const params = await searchParams
-  const owners = listUsers("owner")
-  const ownerId = getValue(params.owner, owners[0]?.id ?? "")
-  const tasks = ownerId ? listOwnerTasks(ownerId) : []
-  const selectedTaskId = getValue(params.task, tasks[0]?.id ?? "")
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0] ?? null
   const notice = getValue(params.notice)
   const error = getValue(params.error)
+  const sessionUser = await getSessionUser()
 
+  if (!sessionUser || (sessionUser.role !== "owner" && sessionUser.role !== "admin")) {
+    const owners = await listUsers("owner")
+    return (
+      <AuthGate
+        title="Owner sign-in"
+        description="Start a production-safe owner session before creating or approving tasks."
+        users={owners}
+        formAction={signInOwnerAction}
+        error={error}
+      />
+    )
+  }
+
+  const tasks = await listOwnerTasks(sessionUser.id)
+  const selectedTaskId = getValue(params.task, tasks[0]?.id ?? "")
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0] ?? null
   const pendingApprovalTasks = tasks.filter((task) => task.status === "pending_approval")
   const paidTasks = tasks.filter((task) => task.status === "paid")
   const openTasks = tasks.filter((task) => task.status === "open")
@@ -46,8 +62,9 @@ export default async function AppPage({
               Create tasks and release payouts
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[#c3cdc0] md:text-base">
-              Owners dispatch proof-based tasks, track validation results, and only step
-              in when the agent escalates a higher-risk payout for manual approval.
+              Signed in as {sessionUser.name}. Owners dispatch proof-based tasks, track
+              validation results, and only step in when the agent escalates a higher-risk
+              payout for manual approval.
             </p>
           </div>
 
@@ -64,6 +81,15 @@ export default async function AppPage({
             >
               Open worker console
             </Link>
+            <form action={signOutAction}>
+              <input type="hidden" name="redirectTo" value="/" />
+              <button
+                type="submit"
+                className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-[#f3f5ec] transition hover:border-white/40"
+              >
+                Sign out
+              </button>
+            </form>
           </div>
         </header>
 
@@ -79,22 +105,6 @@ export default async function AppPage({
           </div>
         ) : null}
 
-        <section className="flex flex-wrap gap-3">
-          {owners.map((owner) => (
-            <Link
-              key={owner.id}
-              href={`/app${toQueryString({ owner: owner.id })}`}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                owner.id === ownerId
-                  ? "bg-[#d9ff66] text-[#071110]"
-                  : "border border-white/10 bg-white/[0.03] text-[#f3f5ec] hover:border-white/30"
-              }`}
-            >
-              {owner.name}
-            </Link>
-          ))}
-        </section>
-
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Owner tasks" value={String(tasks.length)} />
           <MetricCard label="Open tasks" value={String(openTasks.length)} />
@@ -105,18 +115,16 @@ export default async function AppPage({
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
             <div className="flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                    Create
-                  </div>
-                  <h2 className="mt-2 text-2xl font-semibold">New microtask</h2>
+              <div>
+                <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
+                  Create
                 </div>
+                <h2 className="mt-2 text-2xl font-semibold">New microtask</h2>
+              </div>
               <div className="text-sm text-[#8ea38d]">Agent auto-pays below 25 USD</div>
             </div>
 
             <form action={createTaskAction} className="mt-6 grid gap-4">
-              <input type="hidden" name="ownerId" value={ownerId} />
-
               <Field label="Task title">
                 <input
                   name="title"
@@ -285,7 +293,6 @@ export default async function AppPage({
                           </p>
                         </div>
                         <form action={approveTaskAction}>
-                          <input type="hidden" name="ownerId" value={ownerId} />
                           <input type="hidden" name="taskId" value={task.id} />
                           <button
                             type="submit"
@@ -312,7 +319,7 @@ export default async function AppPage({
                   paidTasks.slice(0, 3).map((task) => (
                     <Link
                       key={task.id}
-                      href={`/app${toQueryString({ owner: ownerId, task: task.id })}`}
+                      href={`/app${toQueryString({ task: task.id })}`}
                       className="block rounded-[20px] border border-white/10 bg-[#071110] px-4 py-4 transition hover:border-white/30"
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -353,7 +360,7 @@ export default async function AppPage({
                 tasks.map((task) => (
                   <Link
                     key={task.id}
-                    href={`/app${toQueryString({ owner: ownerId, task: task.id })}`}
+                    href={`/app${toQueryString({ task: task.id })}`}
                     className={`block rounded-[24px] border px-4 py-4 transition ${
                       task.id === selectedTask?.id
                         ? "border-[#d9ff66]/40 bg-[#d9ff66]/10"
@@ -364,9 +371,7 @@ export default async function AppPage({
                       <div className="space-y-2">
                         <TaskStatusBadge status={task.status} />
                         <div className="text-lg font-semibold">{task.title}</div>
-                        <p className="text-sm leading-6 text-[#c3cdc0]">
-                          {task.description}
-                        </p>
+                        <p className="text-sm leading-6 text-[#c3cdc0]">{task.description}</p>
                       </div>
                       <div className="text-sm text-[#8ea38d]">
                         {formatMoney(task.rewardAmount, task.rewardCurrency)}
@@ -379,9 +384,7 @@ export default async function AppPage({
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-              Detail
-            </div>
+            <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">Detail</div>
             {selectedTask ? (
               <div className="mt-4 space-y-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -397,10 +400,7 @@ export default async function AppPage({
                 <div className="grid gap-4 md:grid-cols-2">
                   <DetailCard
                     label="Reward"
-                    value={formatMoney(
-                      selectedTask.rewardAmount,
-                      selectedTask.rewardCurrency,
-                    )}
+                    value={formatMoney(selectedTask.rewardAmount, selectedTask.rewardCurrency)}
                   />
                   <DetailCard
                     label="Proof type"
@@ -409,10 +409,7 @@ export default async function AppPage({
                   <DetailCard label="Request code" value={selectedTask.requestCode} mono />
                   <DetailCard label="Deadline" value={formatDate(selectedTask.deadline)} />
                   <DetailCard label="Owner" value={selectedTask.owner.name} />
-                  <DetailCard
-                    label="Worker"
-                    value={selectedTask.worker?.name ?? "Unassigned"}
-                  />
+                  <DetailCard label="Worker" value={selectedTask.worker?.name ?? "Unassigned"} />
                 </div>
 
                 <div className="rounded-[24px] border border-white/10 bg-[#071110] p-5">
@@ -436,11 +433,27 @@ export default async function AppPage({
                       value={selectedTask.payout?.status ?? "Not started"}
                     />
                   </div>
+
+                  {selectedTask.latestSubmission ? (
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <DetailCard
+                        label="Proof asset"
+                        value={selectedTask.latestSubmission.imageUrl ?? "No image supplied"}
+                      />
+                      <DetailCard
+                        label="Proof location"
+                        value={
+                          selectedTask.latestSubmission.location
+                            ? `${selectedTask.latestSubmission.location.latitude.toFixed(4)}, ${selectedTask.latestSubmission.location.longitude.toFixed(4)}`
+                            : "No location supplied"
+                        }
+                      />
+                    </div>
+                  ) : null}
                 </div>
 
                 {selectedTask.status === "pending_approval" ? (
                   <form action={approveTaskAction} className="flex justify-end">
-                    <input type="hidden" name="ownerId" value={ownerId} />
                     <input type="hidden" name="taskId" value={selectedTask.id} />
                     <button
                       type="submit"
@@ -463,6 +476,53 @@ export default async function AppPage({
   )
 }
 
+function AuthGate({
+  title,
+  description,
+  users,
+  formAction,
+  error,
+}: {
+  title: string
+  description: string
+  users: Array<{ id: string; name: string }>
+  formAction: (formData: FormData) => Promise<void>
+  error: string
+}) {
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1b3432,transparent_28%),linear-gradient(180deg,#031110,#020707)] px-6 py-8 text-[#f3f5ec] md:px-12">
+      <div className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/20">
+        <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">{title}</div>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight">Start an owner session</h1>
+        <p className="mt-4 text-sm leading-7 text-[#c3cdc0]">{description}</p>
+
+        {error ? (
+          <div className="mt-6 rounded-2xl border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ffd7d7]">
+            {error}
+          </div>
+        ) : null}
+
+        <form action={formAction} className="mt-8 space-y-4">
+          {users.map((user) => (
+            <button
+              key={user.id}
+              type="submit"
+              name="userId"
+              value={user.id}
+              className="flex w-full items-center justify-between rounded-[24px] border border-white/10 bg-[#071110] px-5 py-4 text-left transition hover:border-white/30"
+            >
+              <span className="font-semibold">{user.name}</span>
+              <span className="text-xs uppercase tracking-[0.18em] text-[#8ea38d]">
+                Sign in
+              </span>
+            </button>
+          ))}
+        </form>
+      </div>
+    </main>
+  )
+}
+
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
@@ -477,7 +537,7 @@ function Field({
   children,
 }: {
   label: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <label className="space-y-2">
