@@ -1,0 +1,30 @@
+# Environment variables
+.env
+.env*.local
+
+# Node
+node_modules/
+dist/
+
+# Logs and DB
+*.log
+*.db
+
+# Frontend specific overrides
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+next.user-config.*
+.next/
+
+# Project specifics
+product.md
+ui_ux.md
+
+init.sh
+
+# Common ignores
+.DS_Store
