@@ -2,7 +2,7 @@ import Link from "next/link"
 import { unstable_noStore as noStore } from "next/cache"
 import type { ReactNode } from "react"
 
-import { signInOwnerAction, signOutAction } from "@/app/auth/actions"
+import { signInOwnerAction, signOutAction, startOwnerSessionAction } from "@/app/auth/actions"
 import { formatDate, formatMoney, toQueryString } from "@/lib/format"
 import { getSessionUser } from "@/lib/server/session"
 import { listOwnerTasks, listUsers } from "@/lib/server/task-service"
@@ -177,7 +177,7 @@ export default async function OwnerPage({
               <div className="rounded-[24px] border border-black/10 bg-white p-5 font-mono text-sm leading-7 text-[#302a24]">
                 owner = {sessionUser.name}
                 {"\n"}role = {sessionUser.role}
-                {"\n"}identity = local_owner_session
+                {"\n"}identity = owner_session
                 {"\n"}human_verified = false
                 {"\n"}world.status = {world.status}
                 {"\n"}world.environment = {world.environment}
@@ -625,8 +625,8 @@ function OwnerEntryGate({
             Owner access requires World verification.
           </h1>
           <div className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
-            Arrive with a valid owner session, verify the human behind it, then create tasks or
-            release high-risk payouts.
+            Start an owner session in this browser, complete World verification on your phone, then
+            create tasks or release high-risk payouts.
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -634,9 +634,9 @@ function OwnerEntryGate({
               <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
                 production
               </div>
-              <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{`1. obtain owner session
-2. open /owner
-3. complete World verification
+              <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{`1. start owner session
+2. open World verification
+3. confirm in World App
 4. create task or approve payout`}</pre>
             </div>
 
@@ -647,8 +647,25 @@ function OwnerEntryGate({
               <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{`identity = owner | admin
 human_verified = true
 session = edgebind_session
-dev_picker = hidden_in_production`}</pre>
+world_app = phone_or_scanner`}</pre>
             </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <form action={startOwnerSessionAction}>
+              <button
+                type="submit"
+                className="rounded-full bg-[#171717] px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] text-white transition hover:bg-black"
+              >
+                start_owner_verification
+              </button>
+            </form>
+            <Link
+              href="/"
+              className="rounded-full border border-black/10 px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
+            >
+              home
+            </Link>
           </div>
         </section>
 

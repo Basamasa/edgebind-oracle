@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 
 import { AppError } from "@/lib/server/errors"
 import { clearSession, setSession } from "@/lib/server/session"
-import { listUsers } from "@/lib/server/task-service"
+import { createProvisionalOwnerSession, listUsers } from "@/lib/server/task-service"
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unexpected server error."
@@ -48,6 +48,21 @@ export async function signInOwnerAction(formData: FormData) {
     "/owner",
     "Select a valid owner session",
   )
+}
+
+export async function startOwnerSessionAction() {
+  try {
+    const user = await createProvisionalOwnerSession()
+    await setSession(user)
+    redirect("/owner")
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
+    const message = errorMessage(error)
+    redirect(`/owner?error=${encodeURIComponent(message)}`)
+  }
 }
 
 export async function signInWorkerAction(formData: FormData) {

@@ -647,6 +647,25 @@ export async function markUserHumanVerified(userId: string) {
   })
 }
 
+export async function createProvisionalOwnerSession() {
+  const user = {
+    id: randomId("owner"),
+    name: "Owner Session",
+    role: "owner" as const,
+    isHumanVerified: false,
+  }
+
+  await dbQuery(
+    `
+      INSERT INTO users (id, name, role, is_human_verified)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [user.id, user.name, user.role, user.isHumanVerified],
+  )
+
+  return user
+}
+
 export async function getUserProfile(userId: string) {
   return findUser(userId)
 }

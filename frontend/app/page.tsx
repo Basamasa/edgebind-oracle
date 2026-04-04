@@ -1,13 +1,15 @@
 import Link from "next/link"
+import { headers } from "next/headers"
 
 import { getWorldConfig } from "@/lib/world"
 
 const endpoints = [
+  { method: "GET", path: "/llms.txt", note: "plain-text agent instructions" },
+  { method: "GET", path: "/api/agent/bootstrap", note: "machine-readable bootstrap" },
   { method: "GET", path: "/api/world/config", note: "read world status" },
   { method: "POST", path: "/api/world/rp-signature", note: "mint owner rp context" },
   { method: "POST", path: "/api/world/verify", note: "verify owner proof" },
   { method: "POST", path: "/api/auth/agent/token", note: "generate bearer token from verified owner session" },
-  { method: "POST", path: "/api/auth/dev/session", note: "local dev only" },
   { method: "GET", path: "/api/auth/session", note: "read current identity" },
   { method: "POST", path: "/api/tasks", note: "create task" },
   { method: "GET", path: "/api/tasks/:taskId", note: "read task state" },
@@ -19,6 +21,7 @@ const endpoints = [
 ]
 
 const runbook = [
+  "GET /llms.txt or GET /api/agent/bootstrap",
   "GET /api/world/config",
   "owner opens /owner and completes World verification",
   "owner generates agent token",
@@ -31,24 +34,6 @@ const runbook = [
   "if pending_approval -> POST /api/tasks/:taskId/approve",
 ]
 
-const statusCurl = `curl http://localhost:3000/api/world/config`
-
-const devSessionCurl = `curl -X POST http://localhost:3000/api/auth/dev/session \\
-  -H "Content-Type: application/json" \\
-  -c cookies.txt \\
-  -d '{"userId":"owner-ava"}'`
-
-const inspectSessionCurl = `curl http://localhost:3000/api/auth/session \\
-  -b cookies.txt`
-
-const verifyOwnerStep = `open http://localhost:3000/owner
-
-# verify with World
-# then generate agent token`
-
-const createAgentTokenCurl = `curl -X POST http://localhost:3000/api/auth/agent/token \\
-  -b cookies.txt`
-
 const agentTokenResponse = `{
   "ok": true,
   "token": "eyJ...",
@@ -56,7 +41,41 @@ const agentTokenResponse = `{
   "expiresInSeconds": 604800
 }`
 
-const createTaskCurl = `curl -X POST http://localhost:3000/api/tasks \\
+const createTaskResponse = `{
+  "id": "task_...",
+  "status": "open",
+  "requestCode": "TASK-4821",
+  "proofType": "photo_location",
+  "rewardAmount": 8,
+  "rewardCurrency": "HBAR"
+}`
+
+const productionTarget = `target.owner_identity = verified human behind agent
+target.agent_access = bearer token from verified owner
+target.worker_identity = verified human executor
+target.payout_rail = Hedera
+target.manual_approval = inside runtime
+target.owner_verification_surface = /owner
+target.worker_surface = https://edgebind-worker.vercel.app`
+
+export default async function Home() {
+  const headerStore = await headers()
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "edgebind-web.vercel.app"
+  const protocol = headerStore.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https")
+  const origin = `${protocol}://${host}`
+  const world = getWorldConfig()
+  const llmsCurl = `curl ${origin}/llms.txt`
+  const bootstrapCurl = `curl ${origin}/api/agent/bootstrap`
+  const statusCurl = `curl ${origin}/api/world/config`
+  const inspectSessionCurl = `curl ${origin}/api/auth/session \\
+  -H "Authorization: Bearer eyJ..."`
+  const verifyOwnerStep = `open ${origin}/owner
+
+# verify with World
+# then generate agent token`
+  const createAgentTokenCurl = `curl -X POST ${origin}/api/auth/agent/token \\
+  -b cookies.txt`
+  const createTaskCurl = `curl -X POST ${origin}/api/tasks \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer eyJ..." \\
   -d '{
@@ -75,31 +94,12 @@ const createTaskCurl = `curl -X POST http://localhost:3000/api/tasks \\
       "radiusMeters": 120
     }
   }'`
-
-const createTaskResponse = `{
-  "id": "task_...",
-  "status": "open",
-  "requestCode": "TASK-4821",
-  "proofType": "photo_location",
-  "rewardAmount": 8,
-  "rewardCurrency": "HBAR"
-}`
-
-const pollTaskCurl = `curl http://localhost:3000/api/tasks/task_...`
-
-const productionTarget = `target.owner_identity = verified human behind agent
-target.agent_access = bearer token from verified owner
-target.worker_identity = verified human executor
-target.payout_rail = Hedera
-target.manual_approval = inside runtime
-target.owner_verification_surface = /owner
-target.worker_surface = https://edgebind-worker.vercel.app`
-
-export default function Home() {
-  const world = getWorldConfig()
+  const pollTaskCurl = `curl ${origin}/api/tasks/task_...`
 
   const runtimeState = `entrypoint = external agent
 primary_interface = api
+plain_text_bootstrap = /llms.txt
+json_bootstrap = /api/agent/bootstrap
 owner_surface = /owner
 worker_surface = https://edgebind-worker.vercel.app
 task_model = one_task_one_worker
@@ -136,9 +136,9 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
                   Read runtime state. Copy commands. Create task. Poll result.
                 </h1>
                 <p className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
-                  This page is for external agents. The API is the primary interface. The owner
-                  web exists for World verification, agent token generation, and manual approval
-                  when payout risk is high.
+                  This page is for external agents. Start with <code>/llms.txt</code> for plain
+                  text or <code>/api/agent/bootstrap</code> for JSON. The owner web exists only
+                  for World verification, agent token generation, and high-risk approval.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -148,6 +148,12 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
                   >
                     open /owner
                   </Link>
+                  <a
+                    href="/llms.txt"
+                    className="rounded-full border border-black/10 bg-white px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
+                  >
+                    open /llms.txt
+                  </a>
                   <a
                     href="https://edgebind-worker.vercel.app"
                     target="_blank"
@@ -206,16 +212,17 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <CommandCard title="0.read_world_config" code={statusCurl} />
-          <CommandCard title="1.bootstrap_local_dev" code={devSessionCurl} />
-          <CommandCard title="2.inspect_cookie_session" code={inspectSessionCurl} />
+          <CommandCard title="0.read_llms_txt" code={llmsCurl} />
+          <CommandCard title="1.read_agent_bootstrap" code={bootstrapCurl} />
+          <CommandCard title="2.read_world_config" code={statusCurl} />
           <CommandCard title="3.complete_owner_verification" code={verifyOwnerStep} />
           <CommandCard title="4.generate_agent_token" code={createAgentTokenCurl} />
           <CommandCard title="5.agent_token_response" code={agentTokenResponse} />
           <CommandCard title="6.create_task" code={createTaskCurl} />
           <CommandCard title="7.create_task_response" code={createTaskResponse} />
           <CommandCard title="8.poll_task_state" code={pollTaskCurl} />
-          <CommandCard title="9.production_target" code={productionTarget} />
+          <CommandCard title="9.inspect_bearer_session" code={inspectSessionCurl} />
+          <CommandCard title="10.production_target" code={productionTarget} />
         </section>
       </div>
     </main>
