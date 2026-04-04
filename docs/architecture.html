@@ -3,376 +3,204 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Edgebind Oracle - Architecture Graph</title>
+    <title>Edgebind Architecture</title>
     <style>
       :root {
-        --bg: #09111f;
-        --panel: #101a2e;
-        --panel-2: #16233d;
-        --line: #2c3f66;
-        --text: #edf3ff;
-        --muted: #9ab0da;
-        --cyan: #61dafb;
-        --green: #7ff2b6;
-        --amber: #ffd27a;
-        --rose: #ff9fb6;
-        --shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+        --bg: #0b1220;
+        --panel: #121b31;
+        --panel-2: #192542;
+        --line: #31456f;
+        --text: #eef4ff;
+        --muted: #9db0d9;
+        --blue: #62d6ff;
+        --green: #82f2b4;
+        --amber: #ffd37c;
       }
 
       * { box-sizing: border-box; }
 
       body {
         margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         color: var(--text);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(97, 218, 251, 0.10), transparent 25%),
-          radial-gradient(circle at bottom right, rgba(127, 242, 182, 0.08), transparent 22%),
+          radial-gradient(circle at top right, rgba(98, 214, 255, 0.10), transparent 24%),
+          radial-gradient(circle at bottom left, rgba(130, 242, 180, 0.08), transparent 22%),
           var(--bg);
       }
 
       .page {
-        max-width: 1320px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 32px 20px 72px;
+        padding: 32px 20px 64px;
       }
 
-      h1, h2, h3, p {
-        margin: 0;
-      }
+      h1, h2, h3, p { margin: 0; }
 
       .hero {
-        margin-bottom: 28px;
-        display: grid;
-        gap: 14px;
-      }
-
-      .eyebrow {
-        display: inline-block;
-        width: fit-content;
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--cyan);
-        background: rgba(97, 218, 251, 0.11);
-        border: 1px solid rgba(97, 218, 251, 0.2);
+        margin-bottom: 24px;
       }
 
       .hero h1 {
-        font-size: clamp(34px, 5vw, 58px);
-        line-height: 1.03;
-        max-width: 980px;
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: 1.02;
+        margin-bottom: 10px;
       }
 
       .hero p {
         color: var(--muted);
-        max-width: 980px;
         font-size: 18px;
-        line-height: 1.7;
-      }
-
-      .banner {
-        border: 1px solid rgba(255, 210, 122, 0.22);
-        background: rgba(255, 210, 122, 0.08);
-        color: #ffe2a8;
-        border-radius: 16px;
-        padding: 14px 16px;
-        line-height: 1.6;
       }
 
       .section {
-        margin-top: 26px;
+        margin-top: 24px;
       }
 
-      .section > h2 {
-        font-size: 24px;
-        margin-bottom: 14px;
+      .section h2 {
+        font-size: 22px;
+        margin-bottom: 12px;
       }
 
-      .section > p {
-        color: var(--muted);
-        line-height: 1.6;
-        margin-bottom: 14px;
-      }
-
-      .grid {
+      .graph {
         display: grid;
         gap: 16px;
       }
 
-      .three {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+      .main-graph {
+        grid-template-columns: 1fr 120px 1.4fr 120px 1fr;
+        align-items: center;
       }
 
-      .two {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .card {
-        border: 1px solid var(--line);
+      .box {
         background: linear-gradient(180deg, var(--panel-2), var(--panel));
+        border: 1px solid var(--line);
         border-radius: 20px;
         padding: 18px;
-        box-shadow: var(--shadow);
       }
 
-      .card h3 {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--cyan);
-        margin-bottom: 10px;
+      .box h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
       }
 
-      .card h4 {
-        font-size: 21px;
-        margin-bottom: 10px;
-      }
-
-      .card p {
+      .box p {
         color: var(--muted);
         line-height: 1.6;
+        font-size: 14px;
       }
 
-      .card ul {
-        margin: 12px 0 0;
-        padding-left: 18px;
+      .owner { border-color: rgba(98, 214, 255, 0.45); }
+      .runtime { border-color: rgba(130, 242, 180, 0.45); }
+      .worker { border-color: rgba(255, 211, 124, 0.45); }
+
+      .arrow {
+        text-align: center;
+        color: var(--blue);
+        font-size: 24px;
+      }
+
+      .arrow small {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
         color: var(--muted);
-        line-height: 1.7;
       }
 
-      .tag-row {
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .pill-row {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 12px;
       }
 
-      .tag {
-        border-radius: 999px;
+      .pill {
         border: 1px solid var(--line);
-        background: rgba(255,255,255,0.03);
-        color: var(--muted);
-        font-size: 12px;
+        border-radius: 999px;
         padding: 5px 10px;
-      }
-
-      .graph-shell {
-        border: 1px solid var(--line);
-        border-radius: 24px;
-        background: linear-gradient(180deg, rgba(16, 26, 46, 0.96), rgba(9, 17, 31, 0.96));
-        padding: 22px;
-        overflow: hidden;
-        box-shadow: var(--shadow);
-      }
-
-      .graph-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 18px;
-      }
-
-      .legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .legend span {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--muted);
         font-size: 12px;
-      }
-
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        display: inline-block;
-      }
-
-      .graph {
-        display: grid;
-        grid-template-columns: 240px 140px 1fr 140px 240px;
-        gap: 16px;
-        align-items: center;
-      }
-
-      .stack {
-        display: grid;
-        gap: 12px;
-      }
-
-      .node {
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        padding: 16px;
-        min-height: 126px;
-      }
-
-      .node h4 {
-        font-size: 18px;
-        margin-bottom: 8px;
-      }
-
-      .node p {
         color: var(--muted);
-        font-size: 14px;
-        line-height: 1.6;
+        background: rgba(255,255,255,0.03);
       }
 
-      .owner { background: rgba(97, 218, 251, 0.08); }
-      .runtime { background: rgba(127, 242, 182, 0.08); }
-      .worker { background: rgba(255, 159, 182, 0.08); }
-      .integration { background: rgba(255, 210, 122, 0.08); }
-
-      .arrow-col {
+      .flow {
         display: grid;
-        gap: 18px;
-        align-items: center;
-      }
-
-      .arrow-box {
-        border: 1px dashed var(--line);
-        border-radius: 16px;
-        padding: 10px 12px;
-        text-align: center;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .center-shell {
-        display: grid;
-        gap: 14px;
-      }
-
-      .subgrid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-      }
-
-      .flow-grid {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
       }
 
       .step {
-        border-radius: 16px;
         border: 1px solid var(--line);
-        background: rgba(255,255,255,0.03);
+        border-radius: 16px;
         padding: 14px;
-        min-height: 126px;
+        background: rgba(255,255,255,0.03);
+        min-height: 110px;
       }
 
       .step strong {
         display: block;
-        color: var(--green);
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
+        color: var(--green);
         margin-bottom: 8px;
       }
 
       .step p {
         color: var(--muted);
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.55;
       }
 
-      .state-grid {
+      .state-row {
         display: grid;
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(8, 1fr);
         gap: 10px;
+        align-items: center;
       }
 
       .state {
-        border-radius: 14px;
         border: 1px solid var(--line);
-        background: rgba(255,255,255,0.03);
+        border-radius: 14px;
         padding: 12px;
         text-align: center;
-      }
-
-      .state code {
-        font-size: 13px;
-        color: var(--text);
-      }
-
-      .arrow {
-        text-align: center;
-        color: var(--cyan);
-        font-size: 22px;
-      }
-
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .table th,
-      .table td {
-        border-bottom: 1px solid var(--line);
-        text-align: left;
-        padding: 12px 10px;
-        vertical-align: top;
-      }
-
-      .table th {
+        background: rgba(255,255,255,0.03);
         color: var(--text);
         font-size: 13px;
       }
 
-      .table td {
-        color: var(--muted);
-        line-height: 1.55;
-        font-size: 14px;
+      .integration {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
       }
 
-      .status {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-        border: 1px solid var(--line);
+      .integration .box h3 {
+        font-size: 18px;
       }
-
-      .status.current { color: var(--amber); background: rgba(255, 210, 122, 0.08); }
-      .status.target { color: var(--green); background: rgba(127, 242, 182, 0.08); }
-      .status.temp { color: var(--rose); background: rgba(255, 159, 182, 0.08); }
 
       .footer {
         margin-top: 24px;
         color: var(--muted);
         font-size: 14px;
-        line-height: 1.6;
       }
 
-      @media (max-width: 1160px) {
-        .graph,
-        .three,
-        .two,
-        .flow-grid,
-        .state-grid,
-        .subgrid {
+      @media (max-width: 1100px) {
+        .main-graph,
+        .grid-3,
+        .flow,
+        .state-row,
+        .integration {
           grid-template-columns: 1fr;
         }
 
-        .arrow-col {
-          grid-template-columns: 1fr;
-        }
-
-        .graph-header {
-          align-items: flex-start;
-          flex-direction: column;
+        .arrow {
+          transform: rotate(90deg);
         }
       }
     </style>
@@ -380,270 +208,123 @@
   <body>
     <main class="page">
       <section class="hero">
-        <span class="eyebrow">Developer Architecture Graph</span>
-        <h1>Edgebind Oracle should be one execution system with one owner app, one worker app, and one shared backend.</h1>
-        <p>
-          This repo should not feel like two separate products. The clean target is:
-          <strong>web for owners</strong>, <strong>mobile for workers</strong>, and
-          <strong>Next.js as the only backend/runtime</strong>.
-        </p>
-        <div class="banner">
-          Current problem: the repo still has a temporary web worker flow while the mobile app speaks an older API.
-          Final direction: converge everything on one task lifecycle and remove duplicated worker product surfaces.
-        </div>
+        <h1>Edgebind Architecture</h1>
+        <p>Web for owners. Mobile for workers. One shared Next.js backend.</p>
       </section>
 
       <section class="section">
-        <h2>1. System Boundary Graph</h2>
-        <p>This is the intended repo-level split. A new developer should be able to understand this in one glance.</p>
-        <div class="graph-shell">
-          <div class="graph-header">
-            <div>
-              <h3 style="margin-bottom: 6px;">Who owns what</h3>
-              <p style="color: var(--muted);">Roles, runtimes, and integration boundaries.</p>
-            </div>
-            <div class="legend">
-              <span><i class="dot" style="background: var(--cyan)"></i> Product surface</span>
-              <span><i class="dot" style="background: var(--green)"></i> Shared runtime</span>
-              <span><i class="dot" style="background: var(--amber)"></i> External integration</span>
-              <span><i class="dot" style="background: var(--rose)"></i> Temporary surface</span>
+        <h2>System</h2>
+        <div class="graph main-graph">
+          <div class="box owner">
+            <h3>Owner Web</h3>
+            <p>`frontend`</p>
+            <div class="pill-row">
+              <span class="pill">create task</span>
+              <span class="pill">review status</span>
+              <span class="pill">approve high-risk</span>
             </div>
           </div>
 
-          <div class="graph">
-            <div class="stack">
-              <div class="node owner">
-                <h4>Owner Web</h4>
-                <p>Lives in <code>frontend/</code>. Owners create tasks, review execution status, and approve only higher-risk payouts.</p>
-              </div>
-              <div class="node owner">
-                <h4>Landing / Docs</h4>
-                <p>Public explanation of the product, role entry points, and open-source onboarding.</p>
-              </div>
-            </div>
+          <div class="arrow">
+            →
+            <small>API</small>
+          </div>
 
-            <div class="arrow-col">
-              <div class="arrow-box">server actions<br />and JSON APIs</div>
-              <div class="arrow">→</div>
+          <div class="box runtime">
+            <h3>Next.js Backend</h3>
+            <p>`frontend/app/api/*` + `frontend/lib/server/*`</p>
+            <div class="pill-row">
+              <span class="pill">tasks</span>
+              <span class="pill">validation</span>
+              <span class="pill">agent decision</span>
+              <span class="pill">approval</span>
+              <span class="pill">payout routing</span>
+              <span class="pill">Postgres</span>
             </div>
+          </div>
 
-            <div class="center-shell">
-              <div class="node runtime">
-                <h4>Shared Next.js Runtime</h4>
-                <p><code>frontend/app/api/*</code> + <code>frontend/lib/server/*</code> own the execution lifecycle, validation, agent decision, and payout routing.</p>
-                <div class="tag-row">
-                  <span class="tag">Task lifecycle</span>
-                  <span class="tag">Validation</span>
-                  <span class="tag">Agent decision</span>
-                  <span class="tag">Approval gating</span>
-                  <span class="tag">Postgres persistence</span>
-                </div>
-              </div>
-              <div class="subgrid">
-                <div class="node runtime">
-                  <h4>Postgres</h4>
-                  <p>Source of truth for users, tasks, submissions, validations, and payouts.</p>
-                </div>
-                <div class="node integration">
-                  <h4>Integration Layer</h4>
-                  <p>World for identity, Hedera for payouts, Ledger for high-risk approval only.</p>
-                </div>
-              </div>
-            </div>
+          <div class="arrow">
+            ←
+            <small>API</small>
+          </div>
 
-            <div class="arrow-col">
-              <div class="arrow">←</div>
-              <div class="arrow-box">shared task API<br />for mobile</div>
-            </div>
-
-            <div class="stack">
-              <div class="node worker">
-                <h4>Worker Mobile App</h4>
-                <p>Lives in <code>mobile/</code>. This should be the real worker product: browse, accept, capture proof, submit, track status.</p>
-              </div>
-              <div class="node worker">
-                <h4>Temporary Web Worker</h4>
-                <p>Current <code>/worker</code> route in Next.js exists only as a fallback test surface and should not be the final architecture.</p>
-              </div>
+          <div class="box worker">
+            <h3>Worker Mobile</h3>
+            <p>`mobile`</p>
+            <div class="pill-row">
+              <span class="pill">browse tasks</span>
+              <span class="pill">accept</span>
+              <span class="pill">capture proof</span>
+              <span class="pill">submit</span>
             </div>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <h2>2. Core Execution Loop</h2>
-        <p>The product is not a marketplace. It is a proof-and-payment execution layer.</p>
-        <div class="flow-grid">
-          <div class="step"><strong>1. Create</strong><p>Owner, acting through a human-backed agent, creates a task with reward, deadline, proof type, and location rules.</p></div>
-          <div class="step"><strong>2. Gate</strong><p>World should verify who can participate: trusted owner identity and verified worker identity.</p></div>
-          <div class="step"><strong>3. Accept</strong><p>Worker accepts the task. This must be a real lifecycle step, not implied by proof submission.</p></div>
-          <div class="step"><strong>4. Submit</strong><p>Worker sends proof payload: image, coordinates, timestamp, request code, and task reference.</p></div>
-          <div class="step"><strong>5. Validate</strong><p>Backend validates the proof against assignment, deadline, proof type, and location constraints.</p></div>
-          <div class="step"><strong>6. Decide</strong><p>Agent decision chooses <code>auto_pay</code> or <code>requires_approval</code>.</p></div>
-          <div class="step"><strong>7. Pay</strong><p>Low-risk tasks pay through Hedera. High-risk tasks route to Ledger approval first, then pay.</p></div>
+        <h2>Core Flow</h2>
+        <div class="flow">
+          <div class="step"><strong>1</strong><p>Owner creates task</p></div>
+          <div class="step"><strong>2</strong><p>World gates participation</p></div>
+          <div class="step"><strong>3</strong><p>Worker accepts task</p></div>
+          <div class="step"><strong>4</strong><p>Worker submits proof</p></div>
+          <div class="step"><strong>5</strong><p>Backend validates proof</p></div>
+          <div class="step"><strong>6</strong><p>Agent decides auto-pay or approval</p></div>
+          <div class="step"><strong>7</strong><p>Hedera payout, or Ledger approval then payout</p></div>
         </div>
       </section>
 
       <section class="section">
-        <h2>3. Task State Machine</h2>
-        <p>This is the shared lifecycle both web and mobile should speak.</p>
-        <div class="state-grid">
-          <div class="state"><code>open</code></div>
+        <h2>Task Lifecycle</h2>
+        <div class="state-row">
+          <div class="state">open</div>
           <div class="arrow">→</div>
-          <div class="state"><code>accepted</code></div>
+          <div class="state">accepted</div>
           <div class="arrow">→</div>
-          <div class="state"><code>submitted</code></div>
+          <div class="state">submitted</div>
           <div class="arrow">→</div>
-          <div class="state"><code>paid</code></div>
-          <div class="state"><code>pending_approval</code></div>
-        </div>
-        <div class="state-grid" style="margin-top: 10px;">
-          <div class="state"><code>open</code></div>
-          <div class="arrow">→</div>
-          <div class="state"><code>expired</code></div>
-          <div class="arrow">→</div>
-          <div class="state"><code>rejected</code></div>
-          <div class="arrow">→</div>
-          <div class="state"><code>paid</code> only after approval</div>
-          <div class="state"><code>no payment before validation</code></div>
+          <div class="state">paid</div>
+          <div class="state">pending_approval</div>
         </div>
       </section>
 
       <section class="section">
-        <h2>4. Repo Ownership Map</h2>
-        <p>This is the project split that should make sense to contributors.</p>
-        <div class="card">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Folder / Surface</th>
-                <th>Role</th>
-                <th>What belongs there</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>frontend/app/page.tsx</code></td>
-                <td>Landing</td>
-                <td>Product explanation and role entry, not backend details.</td>
-                <td><span class="status current">Current</span></td>
-              </tr>
-              <tr>
-                <td><code>frontend/app/owner/*</code></td>
-                <td>Owner web app</td>
-                <td>Create tasks, inspect execution, approve high-risk payouts.</td>
-                <td><span class="status target">Target</span></td>
-              </tr>
-              <tr>
-                <td><code>frontend/app/api/*</code><br /><code>frontend/lib/server/*</code></td>
-                <td>Shared backend</td>
-                <td>All lifecycle, validation, decision, approval, payout, persistence.</td>
-                <td><span class="status target">Target</span></td>
-              </tr>
-              <tr>
-                <td><code>mobile/*</code></td>
-                <td>Worker app</td>
-                <td>Browse tasks, accept, capture proof, submit, view result.</td>
-                <td><span class="status target">Target</span></td>
-              </tr>
-              <tr>
-                <td><code>frontend/app/worker/*</code></td>
-                <td>Fallback worker UI</td>
-                <td>Temporary internal testing surface while mobile is aligned.</td>
-                <td><span class="status temp">Temporary</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="section">
-        <h2>5. Integration Placement</h2>
-        <p>Each external system should have one clear purpose.</p>
-        <div class="grid three">
-          <div class="card">
+        <h2>Integrations</h2>
+        <div class="integration">
+          <div class="box">
             <h3>World</h3>
-            <h4>Identity Gate</h4>
-            <p>Must gate participation for verified workers and support the human-backed agent story for owners.</p>
-            <div class="tag-row">
-              <span class="tag">worker verification</span>
-              <span class="tag">owner trust</span>
-            </div>
+            <p>Identity layer for verified workers and human-backed agents.</p>
           </div>
-          <div class="card">
+          <div class="box">
             <h3>Hedera</h3>
-            <h4>Payout Rail</h4>
-            <p>Must be the payment path after successful validation and decisioning. It should not appear before validation.</p>
-            <div class="tag-row">
-              <span class="tag">auto pay</span>
-              <span class="tag">receipt / tx reference</span>
-            </div>
+            <p>Payout rail after successful validation.</p>
           </div>
-          <div class="card">
+          <div class="box">
             <h3>Ledger</h3>
-            <h4>Manual Approval</h4>
-            <p>Must only appear for high-risk payouts. It should not be in the normal low-risk happy path.</p>
-            <div class="tag-row">
-              <span class="tag">approval only</span>
-              <span class="tag">high risk branch</span>
-            </div>
+            <p>Manual approval for high-risk payouts only.</p>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <h2>6. Current Gap To Close</h2>
-        <p>The main architectural gap is contract mismatch, not missing screens.</p>
-        <div class="grid two">
-          <div class="card">
-            <h3>Mobile Today</h3>
-            <h4>Old Contract</h4>
-            <ul>
-              <li><code>GET /api/requests</code></li>
-              <li><code>POST /api/verify</code></li>
-              <li>request/proof language</li>
-              <li>implicit one-step verification flow</li>
-            </ul>
+        <h2>Code Ownership</h2>
+        <div class="grid-3">
+          <div class="box">
+            <h3>frontend</h3>
+            <p>Landing page, owner app, shared Next.js backend.</p>
           </div>
-          <div class="card">
-            <h3>Backend Today</h3>
-            <h4>New Contract</h4>
-            <ul>
-              <li><code>GET /api/tasks</code></li>
-              <li><code>POST /api/tasks/:id/accept</code></li>
-              <li><code>POST /api/tasks/:id/submissions</code></li>
-              <li>task/accept/submit/validate/pay language</li>
-            </ul>
+          <div class="box">
+            <h3>mobile</h3>
+            <p>Worker client.</p>
+          </div>
+          <div class="box">
+            <h3>contracts / ios</h3>
+            <p>Not part of the current critical path.</p>
           </div>
         </div>
       </section>
 
-      <section class="section">
-        <h2>7. Recommended Convergence Path</h2>
-        <div class="grid three">
-          <div class="card">
-            <h3>Phase A</h3>
-            <h4>Keep The Core</h4>
-            <p>Keep Next.js as the only backend/runtime and keep the owner web surface.</p>
-          </div>
-          <div class="card">
-            <h3>Phase B</h3>
-            <h4>Align Mobile</h4>
-            <p>Move mobile from <code>requests/verify</code> to the shared task lifecycle, either directly or through short-term compatibility endpoints.</p>
-          </div>
-          <div class="card">
-            <h3>Phase C</h3>
-            <h4>Remove Duplication</h4>
-            <p>Once mobile is aligned, de-emphasize or remove the temporary web worker route and keep one real worker client.</p>
-          </div>
-        </div>
-      </section>
-
-      <p class="footer">
-        Summary: the architecture becomes open-source-worthy once the repo clearly communicates one owner web app,
-        one worker mobile app, one shared Next.js backend, and one task lifecycle that all clients follow.
-      </p>
+      <p class="footer">Temporary web worker routes should not be treated as part of the final architecture.</p>
     </main>
   </body>
   </html>
