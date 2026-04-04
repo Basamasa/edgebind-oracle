@@ -14,7 +14,8 @@ export async function GET() {
       session,
       identity: session
         ? {
-            source: "dev_session",
+            source:
+              session.role !== "worker" && session.isHumanVerified ? "world_id" : "dev_session",
             actorModel:
               session.role === "worker"
                 ? "verified human executor"
@@ -36,8 +37,11 @@ export async function GET() {
         targetModel: "verified human behind agent wallet",
         registerCommand: world.registerCommand,
         chainId: world.chainId,
+        environment: world.environment,
         appIdConfigured: world.appIdConfigured,
         actionIdConfigured: world.actionIdConfigured,
+        rpIdConfigured: world.rpIdConfigured,
+        rpSigningKeyConfigured: world.rpSigningKeyConfigured,
         rpcUrlConfigured: world.rpcUrlConfigured,
         relayUrlConfigured: world.relayUrlConfigured,
         agentBookAddress: world.agentBookAddress,

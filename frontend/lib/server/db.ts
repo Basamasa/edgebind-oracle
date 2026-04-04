@@ -142,7 +142,7 @@ async function runBootstrap(executor: Queryable) {
         ON CONFLICT (id) DO UPDATE
         SET name = EXCLUDED.name,
             role = EXCLUDED.role,
-            is_human_verified = EXCLUDED.is_human_verified
+            is_human_verified = users.is_human_verified OR EXCLUDED.is_human_verified
       `,
       [user.id, user.name, user.role, user.isHumanVerified],
     )

@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         targetModel: "verified human behind agent wallet",
         registerCommand: world.registerCommand,
         chainId: world.chainId,
+        environment: world.environment,
       },
     })
   } catch (error) {

@@ -1,10 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { isRedirectError } from "next/dist/client/components/redirect-error"
 import { redirect } from "next/navigation"
 
 import { toQueryString } from "@/lib/format"
-import { requireSessionRole } from "@/lib/server/session"
+import { requireVerifiedOwnerSession } from "@/lib/server/session"
 import { approveTask, createTask } from "@/lib/server/task-service"
 
 function errorMessage(error: unknown) {
@@ -36,7 +37,7 @@ function buildTaskDescription(formData: FormData) {
 
 export async function createTaskAction(formData: FormData) {
   try {
-    const owner = await requireSessionRole(["owner", "admin"])
+    const owner = await requireVerifiedOwnerSession()
     const rawDeadline = String(formData.get("deadline") ?? "")
 
     const task = await createTask({
@@ -72,6 +73,10 @@ export async function createTaskAction(formData: FormData) {
       })}`,
     )
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     redirect(
       `/owner${toQueryString({
         error: errorMessage(error),
@@ -84,7 +89,7 @@ export async function approveTaskAction(formData: FormData) {
   const taskId = String(formData.get("taskId") ?? "")
 
   try {
-    const approver = await requireSessionRole(["owner", "admin"])
+    const approver = await requireVerifiedOwnerSession()
 
     await approveTask(taskId, {
       approverId: approver.id,
@@ -100,6 +105,10 @@ export async function approveTaskAction(formData: FormData) {
       })}`,
     )
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     redirect(
       `/owner${toQueryString({
         task: taskId,

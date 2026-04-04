@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { requireSessionRole } from "@/lib/server/session"
+import { requireVerifiedOwnerSession } from "@/lib/server/session"
 import { createTask, listTasks } from "@/lib/server/task-service"
 import { toErrorResponse } from "@/lib/server/errors"
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const owner = await requireSessionRole(["owner", "admin"])
+    const owner = await requireVerifiedOwnerSession()
     const payload = await request.json()
 
     return NextResponse.json(

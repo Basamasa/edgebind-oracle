@@ -1,5 +1,6 @@
 "use server"
 
+import { isRedirectError } from "next/dist/client/components/redirect-error"
 import { redirect } from "next/navigation"
 
 import { AppError } from "@/lib/server/errors"
@@ -31,6 +32,10 @@ async function signInAsRole(
     await setSession(user)
     redirect(redirectTo)
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     const message = errorMessage(error)
     redirect(`${redirectTo}?error=${encodeURIComponent(message)}`)
   }

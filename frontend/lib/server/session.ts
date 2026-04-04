@@ -97,6 +97,16 @@ export async function requireVerifiedWorkerSession() {
   return user
 }
 
+export async function requireVerifiedOwnerSession() {
+  const user = await requireSessionRole(["owner", "admin"])
+
+  if (!user.isHumanVerified) {
+    throw new AppError(403, "World verification is required before creating or approving tasks")
+  }
+
+  return user
+}
+
 export async function setSession(user: UserSummary) {
   const cookieStore = await cookies()
   const payload: SessionPayload = {

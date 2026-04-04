@@ -4,9 +4,11 @@ import { getWorldConfig } from "@/lib/world"
 
 const endpoints = [
   { method: "GET", path: "/api/world/config", note: "read current World AgentKit status" },
+  { method: "POST", path: "/api/world/rp-signature", note: "mint a signed RP context for World verification" },
+  { method: "POST", path: "/api/world/verify", note: "verify the World proof and upgrade owner identity" },
   { method: "POST", path: "/api/auth/dev/session", note: "local dev: mint signed session cookie" },
   { method: "GET", path: "/api/auth/session", note: "inspect current identity and cookie session" },
-  { method: "POST", path: "/api/tasks", note: "create task as signed owner session" },
+  { method: "POST", path: "/api/tasks", note: "create task as verified owner session" },
   { method: "GET", path: "/api/tasks/:taskId", note: "read task state" },
   { method: "POST", path: "/api/tasks/:taskId/accept", note: "accept as verified worker session" },
   { method: "POST", path: "/api/tasks/:taskId/submissions", note: "submit proof as verified worker session" },
@@ -16,6 +18,8 @@ const endpoints = [
 const protocol = [
   "read /api/world/config",
   "bootstrap owner session in local dev",
+  "human behind the agent opens /owner and verifies with World",
+  "confirm identity.humanVerified = true",
   "call POST /api/tasks",
   "verified human accepts",
   "verified human submits proof",
@@ -33,6 +37,14 @@ const devAuthExample = `curl -X POST http://localhost:3000/api/auth/dev/session 
 
 const sessionExample = `curl http://localhost:3000/api/auth/session \\
   -b cookies.txt`
+
+const ownerVerifyExample = `open http://localhost:3000/owner
+
+# sign in as the owner session
+# tap verify_with_world
+# approve in World App
+# then re-run GET /api/auth/session and confirm:
+# identity.humanVerified = true`
 
 const createTaskExample = `curl -X POST http://localhost:3000/api/tasks \\
   -H "Content-Type: application/json" \\
@@ -83,9 +95,12 @@ world.chain_id = ${world.chainId}`
 
   const worldStatus = `provider = ${world.provider}
 status = ${world.status}
+environment = ${world.environment}
 chain_id = ${world.chainId}
 app_id_configured = ${String(world.appIdConfigured)}
 action_id_configured = ${String(world.actionIdConfigured)}
+rp_id_configured = ${String(world.rpIdConfigured)}
+rp_signing_key_configured = ${String(world.rpSigningKeyConfigured)}
 rpc_url_configured = ${String(world.rpcUrlConfigured)}
 relay_url_configured = ${String(world.relayUrlConfigured)}
 agentbook_address = ${world.agentBookAddress ?? "unset"}`
@@ -197,23 +212,30 @@ agentbook_address = ${world.agentBookAddress ?? "unset"}`
           </section>
 
           <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="3. Create Task" />
+            <SectionTitle title="3. Verify Owner With World" />
             <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {createTaskExample}
+              {ownerVerifyExample}
             </pre>
           </section>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
           <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="4. Expected Create Response" />
+            <SectionTitle title="4. Create Task" />
+            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
+              {createTaskExample}
+            </pre>
+          </section>
+
+          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+            <SectionTitle title="5. Expected Create Response" />
             <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
               {createTaskResponse}
             </pre>
           </section>
 
           <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="5. World AgentKit Target Path" />
+            <SectionTitle title="6. World AgentKit Target Path" />
             <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
               {worldTargetExample}
             </pre>

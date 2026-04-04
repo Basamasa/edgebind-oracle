@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { isRedirectError } from "next/dist/client/components/redirect-error"
 import { redirect } from "next/navigation"
 
 import { toQueryString } from "@/lib/format"
@@ -26,6 +27,10 @@ export async function acceptTaskAction(formData: FormData) {
       })}`,
     )
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     redirect(
       `/worker${toQueryString({
         task: taskId,
@@ -69,6 +74,10 @@ export async function submitTaskAction(formData: FormData) {
       })}`,
     )
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error
+    }
+
     redirect(
       `/worker${toQueryString({
         task: taskId,

@@ -6,6 +6,8 @@ import { signInOwnerAction, signOutAction } from "@/app/auth/actions"
 import { formatDate, formatMoney, toQueryString } from "@/lib/format"
 import { getSessionUser } from "@/lib/server/session"
 import { listOwnerTasks, listUsers } from "@/lib/server/task-service"
+import { getWorldConfig } from "@/lib/world"
+import { WorldOwnerVerify } from "@/components/world-owner-verify"
 
 import { approveTaskAction, createTaskAction } from "../app/actions"
 
@@ -56,6 +58,7 @@ export default async function OwnerPage({
   const notice = getValue(params.notice)
   const error = getValue(params.error)
   const sessionUser = await getSessionUser()
+  const world = getWorldConfig()
 
   if (!sessionUser || (sessionUser.role !== "owner" && sessionUser.role !== "admin")) {
     const owners = await listUsers("owner")
@@ -67,6 +70,72 @@ export default async function OwnerPage({
         formAction={signInOwnerAction}
         error={error}
       />
+    )
+  }
+
+  if (!sessionUser.isHumanVerified) {
+    return (
+      <main className="min-h-screen bg-[#f3ede3] px-4 py-4 text-[#171717] md:px-6 md:py-6">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          <header className="flex flex-col gap-4 rounded-[28px] border border-black/10 bg-[#fffaf2] px-5 py-4 shadow-[0_18px_50px_rgba(40,29,17,0.08)] md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">
+                owner verification
+              </div>
+              <div className="mt-2 font-mono text-sm text-[#4e473d]">
+                World verification is required before this owner can create or approve tasks.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/"
+                className="rounded-full border border-black/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
+              >
+                home
+              </Link>
+              <form action={signOutAction}>
+                <input type="hidden" name="redirectTo" value="/" />
+                <button
+                  type="submit"
+                  className="rounded-full border border-black/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
+                >
+                  sign_out
+                </button>
+              </form>
+            </div>
+          </header>
+
+          {error ? (
+            <div className="rounded-[20px] border border-[#a2322d]/20 bg-[#ffefec] px-4 py-3 font-mono text-xs text-[#a2322d]">
+              {error}
+            </div>
+          ) : null}
+
+          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+            <SectionTitle title="World Check" />
+            <div className="mt-5 space-y-4">
+              <div className="rounded-[24px] border border-black/10 bg-white p-5 font-mono text-sm leading-7 text-[#302a24]">
+                owner = {sessionUser.name}
+                {"\n"}role = {sessionUser.role}
+                {"\n"}identity = local_owner_session
+                {"\n"}human_verified = false
+                {"\n"}world.status = {world.status}
+                {"\n"}world.environment = {world.environment}
+              </div>
+
+              <WorldOwnerVerify
+                appId={world.appId}
+                action={world.action}
+                environment={world.environment}
+                rpContext={null}
+                worldReady={world.status === "configured"}
+                userId={sessionUser.id}
+              />
+            </div>
+          </section>
+        </div>
+      </main>
     )
   }
 

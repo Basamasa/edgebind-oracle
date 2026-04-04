@@ -570,6 +570,25 @@ export async function listUsers(role?: string) {
   return result.rows.map(mapUser)
 }
 
+export async function markUserHumanVerified(userId: string) {
+  return withTransaction(async (client) => {
+    const user = await findUser(userId, client)
+    const verified = user.isHumanVerified ? user : { ...user, isHumanVerified: true }
+
+    await dbQuery(
+      `
+        UPDATE users
+        SET is_human_verified = TRUE
+        WHERE id = $1
+      `,
+      [userId],
+      client,
+    )
+
+    return verified
+  })
+}
+
 export async function listTasks(filters: ListTaskFilters = {}) {
   await syncExpiredTasks()
 

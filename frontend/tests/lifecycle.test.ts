@@ -7,6 +7,8 @@ import {
   approveTask,
   createTask,
   getTaskById,
+  listUsers,
+  markUserHumanVerified,
   submitTask,
 } from "../lib/server/task-service"
 
@@ -171,4 +173,16 @@ test("a different owner cannot approve a pending payout", async () => {
     }),
     /only the task owner or an admin approver/i,
   )
+})
+
+test("owner verification persists in the user store after World approval", async () => {
+  const ownersBefore = await listUsers("owner")
+  assert.equal(ownersBefore.find((user) => user.id === ownerId)?.isHumanVerified, false)
+
+  const updated = await markUserHumanVerified(ownerId)
+
+  assert.equal(updated.isHumanVerified, true)
+
+  const ownersAfter = await listUsers("owner")
+  assert.equal(ownersAfter.find((user) => user.id === ownerId)?.isHumanVerified, true)
 })
