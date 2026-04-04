@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Edgebind Oracle',
-  description: 'A pure Next.js control plane for human-backed AI agent microtasks.',
+  description: 'API-first execution layer for human-backed agents to assign verified humans, validate proof, and release payouts conditionally.',
   icons: {
     icon: [
       {

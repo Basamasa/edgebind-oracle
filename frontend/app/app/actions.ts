@@ -11,6 +11,29 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unexpected server error."
 }
 
+function buildTaskDescription(formData: FormData) {
+  const directDescription = String(formData.get("description") ?? "").trim()
+
+  if (directDescription) {
+    return directDescription
+  }
+
+  const instructions = String(formData.get("instructions") ?? "").trim()
+  const doneWhen = String(formData.get("done_when") ?? "").trim()
+  const proofRequirements = String(formData.get("proof_requirements") ?? "").trim()
+  const autoReleaseIf = String(formData.get("auto_release_if") ?? "").trim()
+  const escalateIf = String(formData.get("escalate_if") ?? "").trim()
+  const parts = [
+    instructions ? `instructions = ${instructions}` : "",
+    doneWhen ? `done_when = ${doneWhen}` : "",
+    proofRequirements ? `proof_requirements = ${proofRequirements}` : "",
+    autoReleaseIf ? `auto_release_if = ${autoReleaseIf}` : "",
+    escalateIf ? `escalate_if = ${escalateIf}` : "",
+  ].filter(Boolean)
+
+  return parts.join("\n\n")
+}
+
 export async function createTaskAction(formData: FormData) {
   try {
     const owner = await requireSessionRole(["owner", "admin"])
@@ -18,21 +41,24 @@ export async function createTaskAction(formData: FormData) {
 
     const task = await createTask({
       ownerId: owner.id,
-      agentRef: String(formData.get("agentRef") ?? ""),
-      title: String(formData.get("title") ?? ""),
-      description: String(formData.get("description") ?? ""),
-      rewardAmount: Number(formData.get("rewardAmount") ?? 0),
-      rewardCurrency: String(formData.get("rewardCurrency") ?? "USD"),
+      agentRef: String(formData.get("agent_ref") ?? ""),
+      title: String(formData.get("objective") ?? ""),
+      description: buildTaskDescription(formData),
+      rewardAmount: Number(formData.get("payout_amount") ?? 0),
+      rewardCurrency: String(formData.get("currency") ?? "USD"),
       deadline: new Date(rawDeadline).toISOString(),
-      proofType: String(formData.get("proofType") ?? "photo_location"),
-      requestCode: String(formData.get("requestCode") ?? "") || undefined,
+      proofType: String(formData.get("proof_type") ?? "photo_location"),
+      requestCode: String(formData.get("request_code") ?? "") || undefined,
       locationRequirement:
-        formData.get("useLocationRequirement") === "on"
+        String(formData.get("location_label") ?? "").trim() ||
+        String(formData.get("location_lat") ?? "").trim() ||
+        String(formData.get("location_lng") ?? "").trim() ||
+        String(formData.get("location_radius_m") ?? "").trim()
           ? {
-              label: String(formData.get("locationLabel") ?? "") || undefined,
-              latitude: Number(formData.get("latitude") ?? 0),
-              longitude: Number(formData.get("longitude") ?? 0),
-              radiusMeters: Number(formData.get("radiusMeters") ?? 0),
+              label: String(formData.get("location_label") ?? "") || undefined,
+              latitude: Number(formData.get("location_lat") ?? 0),
+              longitude: Number(formData.get("location_lng") ?? 0),
+              radiusMeters: Number(formData.get("location_radius_m") ?? 0),
             }
           : undefined,
     })

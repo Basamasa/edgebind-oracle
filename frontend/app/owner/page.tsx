@@ -17,6 +17,34 @@ function getValue(value: string | string[] | undefined, fallback = "") {
   return value ?? fallback
 }
 
+function parseContract(description: string) {
+  const fields = new Map<string, string>()
+
+  for (const line of description.split("\n")) {
+    const trimmed = line.trim()
+    const separatorIndex = trimmed.indexOf("=")
+
+    if (separatorIndex <= 0) {
+      continue
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim()
+    const value = trimmed.slice(separatorIndex + 1).trim()
+
+    if (key && value) {
+      fields.set(key, value)
+    }
+  }
+
+  return {
+    instructions: fields.get("instructions") ?? "",
+    doneWhen: fields.get("done_when") ?? "",
+    proofRequirements: fields.get("proof_requirements") ?? "",
+    autoReleaseIf: fields.get("auto_release_if") ?? "validation_passes && amount < 25",
+    escalateIf: fields.get("escalate_if") ?? "validation_uncertain || amount >= 25",
+  }
+}
+
 export default async function OwnerPage({
   searchParams,
 }: {
@@ -33,8 +61,8 @@ export default async function OwnerPage({
     const owners = await listUsers("owner")
     return (
       <AuthGate
-        title="Owner sign-in"
-        description="The owner is the human operator running a human-backed AI agent. Start that session here."
+        title="owner sign-in"
+        description="Start the manual console session."
         users={owners}
         formAction={signInOwnerAction}
         error={error}
@@ -45,431 +73,346 @@ export default async function OwnerPage({
   const tasks = await listOwnerTasks(sessionUser.id)
   const selectedTaskId = getValue(params.task, tasks[0]?.id ?? "")
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0] ?? null
-  const pendingApprovalTasks = tasks.filter((task) => task.status === "pending_approval")
-  const paidTasks = tasks.filter((task) => task.status === "paid")
-  const openTasks = tasks.filter((task) => task.status === "open")
-  const totalValue = tasks.reduce((sum, task) => sum + task.rewardAmount, 0)
+  const contract = selectedTask ? parseContract(selectedTask.description) : null
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1b3432,transparent_28%),linear-gradient(180deg,#031110,#020707)] px-6 py-8 text-[#f3f5ec] md:px-12">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <header className="flex flex-col gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-              Agent Owner Dashboard
+    <main className="min-h-screen bg-[#f3ede3] px-4 py-4 text-[#171717] md:px-6 md:py-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <header className="flex flex-col gap-4 rounded-[28px] border border-black/10 bg-[#fffaf2] px-5 py-4 shadow-[0_18px_50px_rgba(40,29,17,0.08)] md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">
+              manual console
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-              Create tasks and release payouts
-            </h1>
-            <p className="max-w-3xl text-sm leading-7 text-[#c3cdc0] md:text-base">
-              Signed in as {sessionUser.name}. This role is the human operator behind a
-              human-backed AI agent: create tasks, review proof, and approve only the
-              high-risk payouts the agent escalates.
-            </p>
+            <div className="mt-2 font-mono text-sm text-[#4e473d]">
+              fallback operator surface for testing and approval
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Link
               href="/"
-              className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-[#f3f5ec] transition hover:border-white/40"
+              className="rounded-full border border-black/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
             >
-              Home
-            </Link>
-            <Link
-              href="/worker"
-              className="rounded-full bg-[#d9ff66] px-5 py-2 text-sm font-semibold text-[#071110] transition hover:opacity-90"
-            >
-              Worker flow
+              home
             </Link>
             <form action={signOutAction}>
               <input type="hidden" name="redirectTo" value="/" />
               <button
                 type="submit"
-                className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-[#f3f5ec] transition hover:border-white/40"
+                className="rounded-full border border-black/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
               >
-                Sign out
+                sign_out
               </button>
             </form>
           </div>
         </header>
 
         {notice ? (
-          <div className="rounded-2xl border border-[#d9ff66]/40 bg-[#d9ff66]/10 px-4 py-3 text-sm text-[#efffc2]">
+          <div className="rounded-[20px] border border-[#0f6f52]/20 bg-[#ebf8f2] px-4 py-3 font-mono text-xs text-[#0f6f52]">
             {notice}
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-2xl border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ffd7d7]">
+          <div className="rounded-[20px] border border-[#a2322d]/20 bg-[#ffefec] px-4 py-3 font-mono text-xs text-[#a2322d]">
             {error}
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Owner tasks" value={String(tasks.length)} />
-          <MetricCard label="Open tasks" value={String(openTasks.length)} />
-          <MetricCard label="Needs approval" value={String(pendingApprovalTasks.length)} />
-          <MetricCard label="Reward value" value={formatMoney(totalValue, "USD")} />
-        </section>
-
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                  Create
-                </div>
-                <h2 className="mt-2 text-2xl font-semibold">New microtask</h2>
-              </div>
-              <div className="text-sm text-[#8ea38d]">Agent auto-pays below 25 USD</div>
-            </div>
+          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+            <SectionTitle title="Task Spec" />
 
-            <form action={createTaskAction} className="mt-6 grid gap-4">
-              <Field label="Task title">
+            <form action={createTaskAction} className="mt-5 space-y-4">
+              <Field label="objective" hint="What must the human do?">
                 <input
-                  name="title"
+                  name="objective"
                   required
-                  placeholder="Take a live photo at the station entrance"
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                  placeholder="Photograph station entrance"
+                  className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                 />
               </Field>
 
-              <Field label="Description">
+              <Field label="instructions" hint="Exact execution steps.">
                 <textarea
-                  name="description"
+                  name="instructions"
                   required
-                  rows={5}
-                  placeholder="Tell the worker what to prove and what a valid proof should contain."
-                  className="w-full rounded-2xl border border-white/10 bg-[#071110] px-4 py-3 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                  rows={4}
+                  placeholder="Go to the north entrance. Take one current photo. Keep the sign and surroundings visible."
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 font-mono text-sm outline-none transition focus:border-black/30"
                 />
               </Field>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Reward amount">
+              <Field label="done_when" hint="What must be true for completion to count?">
+                <textarea
+                  name="done_when"
+                  required
+                  rows={4}
+                  placeholder="Photo is recent, readable, at the correct entrance, and includes the request code."
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 font-mono text-sm outline-none transition focus:border-black/30"
+                />
+              </Field>
+
+              <Field label="proof_type" hint="What evidence must be submitted?">
+                <select
+                  name="proof_type"
+                  defaultValue="photo_location"
+                  className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                >
+                  <option value="photo">photo</option>
+                  <option value="location">location</option>
+                  <option value="photo_location">photo_location</option>
+                </select>
+              </Field>
+
+              <Field label="proof_requirements" hint="List the exact proof required.">
+                <textarea
+                  name="proof_requirements"
+                  required
+                  rows={3}
+                  placeholder="1 photo, GPS within 120m, request code visible in frame."
+                  className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 font-mono text-sm outline-none transition focus:border-black/30"
+                />
+              </Field>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="location_label" hint="Where must it happen?">
                   <input
-                    name="rewardAmount"
+                    name="location_label"
+                    placeholder="Cannes Station north entrance"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="location_lat" hint="Latitude">
+                  <input
+                    name="location_lat"
+                    type="number"
+                    step="0.000001"
+                    placeholder="43.5534"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="location_lng" hint="Longitude">
+                  <input
+                    name="location_lng"
+                    type="number"
+                    step="0.000001"
+                    placeholder="7.0174"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="location_radius_m" hint="Radius in meters">
+                  <input
+                    name="location_radius_m"
                     type="number"
                     min="1"
-                    step="0.5"
-                    defaultValue="5"
-                    required
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                    placeholder="120"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                   />
                 </Field>
-                <Field label="Currency">
-                  <input
-                    name="rewardCurrency"
-                    defaultValue="USD"
-                    required
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                  />
-                </Field>
-                <Field label="Deadline">
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="deadline" hint="When does this expire?">
                   <input
                     name="deadline"
                     type="datetime-local"
                     required
                     defaultValue={defaultDeadlineValue()}
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                   />
                 </Field>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Proof type">
-                  <select
-                    name="proofType"
-                    defaultValue="photo_location"
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                  >
-                    <option value="photo">Photo</option>
-                    <option value="location">Location</option>
-                    <option value="photo_location">Photo + location</option>
-                  </select>
-                </Field>
-                <Field label="Agent ref">
+                <Field label="payout_amount" hint="How much releases if validation passes?">
                   <input
-                    name="agentRef"
+                    name="payout_amount"
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    defaultValue="8"
+                    required
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="currency" hint="Currency code">
+                  <input
+                    name="currency"
+                    defaultValue="USD"
+                    required
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="auto_release_if" hint="Rules for automatic payout.">
+                  <input
+                    name="auto_release_if"
+                    defaultValue="validation_passes && amount < 25"
+                    required
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="escalate_if" hint="Rules for manual review.">
+                  <input
+                    name="escalate_if"
+                    defaultValue="validation_uncertain || amount >= 25"
+                    required
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
+                  />
+                </Field>
+                <Field label="agent_ref" hint="Agent identifier">
+                  <input
+                    name="agent_ref"
                     defaultValue="dispatch-scout"
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                   />
                 </Field>
-                <Field label="Request code">
+                <Field label="request_code" hint="Optional or auto-generated">
                   <input
-                    name="requestCode"
-                    placeholder="Auto-generated if blank"
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#071110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
+                    name="request_code"
+                    placeholder="TASK-4821"
+                    className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                   />
                 </Field>
               </div>
 
-              <div className="rounded-[24px] border border-white/10 bg-[#071110] p-4">
-                <label className="flex items-center gap-3 text-sm font-medium text-[#f3f5ec]">
-                  <input
-                    type="checkbox"
-                    name="useLocationRequirement"
-                    defaultChecked
-                    className="h-4 w-4 accent-[#d9ff66]"
-                  />
-                  Require location-bound proof
-                </label>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <Field label="Location label">
-                    <input
-                      name="locationLabel"
-                      defaultValue="Cannes Station"
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#031110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                    />
-                  </Field>
-                  <Field label="Radius (meters)">
-                    <input
-                      name="radiusMeters"
-                      type="number"
-                      min="1"
-                      defaultValue="120"
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#031110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                    />
-                  </Field>
-                  <Field label="Latitude">
-                    <input
-                      name="latitude"
-                      type="number"
-                      step="0.000001"
-                      defaultValue="43.5534"
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#031110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                    />
-                  </Field>
-                  <Field label="Longitude">
-                    <input
-                      name="longitude"
-                      type="number"
-                      step="0.000001"
-                      defaultValue="7.0174"
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#031110] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
-                    />
-                  </Field>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
+              <div className="pt-2">
                 <button
                   type="submit"
-                  className="rounded-full bg-[#d9ff66] px-6 py-3 text-sm font-semibold text-[#071110] transition hover:opacity-90"
+                  className="rounded-full bg-[#171717] px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] text-white transition hover:bg-black"
                 >
-                  Create task
+                  create_task
                 </button>
               </div>
             </form>
-          </div>
+          </section>
 
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                    Approval queue
-                  </div>
-                  <h2 className="mt-2 text-2xl font-semibold">Manual releases</h2>
-                </div>
-                <div className="text-sm text-[#8ea38d]">{pendingApprovalTasks.length} waiting</div>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {pendingApprovalTasks.length === 0 ? (
-                  <EmptyState copy="No high-value tasks are waiting for owner approval." />
-                ) : (
-                  pendingApprovalTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="rounded-[24px] border border-white/10 bg-[#071110] p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2">
-                          <TaskStatusBadge status={task.status} />
-                          <div className="text-lg font-semibold">{task.title}</div>
-                          <p className="text-sm leading-6 text-[#c3cdc0]">
-                            {task.validation?.reason ?? "Awaiting owner review."}
-                          </p>
-                        </div>
-                        <form action={approveTaskAction}>
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <button
-                            type="submit"
-                            className="rounded-full bg-[#d9ff66] px-5 py-2 text-sm font-semibold text-[#071110] transition hover:opacity-90"
-                          >
-                            Approve payout
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+              <SectionTitle title="System Decision" />
+              <pre className="mt-5 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
+{`worker_identity = verified_human
+validation = deterministic
+payout_path = auto_release | manual_approval
+risk_threshold = 25 USD
+rail = Hedera
+manual_layer = Ledger(high_risk_only)`}
+              </pre>
             </section>
 
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-              <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                Recently paid
-              </div>
-              <div className="mt-6 space-y-3">
-                {paidTasks.length === 0 ? (
-                  <EmptyState copy="No tasks have been paid out yet." />
-                ) : (
-                  paidTasks.slice(0, 3).map((task) => (
-                    <Link
-                      key={task.id}
-                      href={`/owner${toQueryString({ task: task.id })}`}
-                      className="block rounded-[20px] border border-white/10 bg-[#071110] px-4 py-4 transition hover:border-white/30"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="font-semibold">{task.title}</div>
-                          <div className="mt-1 text-sm text-[#8ea38d]">
-                            {task.worker?.name ?? "Worker unassigned"}
-                          </div>
-                        </div>
-                        <div className="text-sm text-[#d9ff66]">
-                          {formatMoney(task.rewardAmount, task.rewardCurrency)}
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
+            <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+              <SectionTitle title="Task Output" />
+              {selectedTask && contract ? (
+                <pre className="mt-5 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
+{`task_id = ${selectedTask.id}
+status = ${selectedTask.status}
+request_code = ${selectedTask.requestCode}
+proof_type = ${selectedTask.proofType}
+deadline = ${selectedTask.deadline}
+payout_amount = ${selectedTask.rewardAmount} ${selectedTask.rewardCurrency}
+auto_release_if = ${contract.autoReleaseIf}
+escalate_if = ${contract.escalateIf}`}
+                </pre>
+              ) : (
+                <EmptyState copy="Create a task to get machine-readable output." />
+              )}
             </section>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                  Inventory
-                </div>
-                <h2 className="mt-2 text-2xl font-semibold">Owner tasks</h2>
-              </div>
-              <div className="text-sm text-[#8ea38d]">{tasks.length} total</div>
+        <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+          <SectionTitle title="Recent Tasks" />
+          {tasks.length === 0 ? (
+            <div className="mt-5">
+              <EmptyState copy="No tasks yet." />
             </div>
+          ) : (
+            <div className="mt-5 overflow-hidden rounded-[20px] border border-black/10 bg-white">
+              <div className="grid grid-cols-[1.4fr_2.2fr_1fr_1.2fr_1fr_1.4fr] gap-3 border-b border-black/10 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
+                <div>task_id</div>
+                <div>objective</div>
+                <div>status</div>
+                <div>proof_type</div>
+                <div>payout</div>
+                <div>created_at</div>
+              </div>
 
-            <div className="mt-6 space-y-3">
-              {tasks.length === 0 ? (
-                <EmptyState copy="No tasks exist for this owner yet." />
-              ) : (
-                tasks.map((task) => (
-                  <Link
-                    key={task.id}
-                    href={`/owner${toQueryString({ task: task.id })}`}
-                    className={`block rounded-[24px] border px-4 py-4 transition ${
-                      task.id === selectedTask?.id
-                        ? "border-[#d9ff66]/40 bg-[#d9ff66]/10"
-                        : "border-white/10 bg-[#071110] hover:border-white/30"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-2">
-                        <TaskStatusBadge status={task.status} />
-                        <div className="text-lg font-semibold">{task.title}</div>
-                        <p className="text-sm leading-6 text-[#c3cdc0]">{task.description}</p>
-                      </div>
-                      <div className="text-sm text-[#8ea38d]">
-                        {formatMoney(task.rewardAmount, task.rewardCurrency)}
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
+              {tasks.map((task) => (
+                <Link
+                  key={task.id}
+                  href={`/owner${toQueryString({ task: task.id })}`}
+                  className={`grid grid-cols-[1.4fr_2.2fr_1fr_1.2fr_1fr_1.4fr] gap-3 border-b border-black/10 px-4 py-3 font-mono text-xs text-[#302a24] transition hover:bg-[#faf4ea] last:border-b-0 ${
+                    task.id === selectedTask?.id ? "bg-[#f8f0e4]" : "bg-white"
+                  }`}
+                >
+                  <div className="truncate">{task.id}</div>
+                  <div className="truncate">{task.title}</div>
+                  <div>{task.status}</div>
+                  <div>{task.proofType}</div>
+                  <div>{formatMoney(task.rewardAmount, task.rewardCurrency)}</div>
+                  <div>{shortDate(task.createdAt)}</div>
+                </Link>
+              ))}
             </div>
-          </div>
+          )}
+        </section>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">Detail</div>
-            {selectedTask ? (
-              <div className="mt-4 space-y-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <h2 className="text-3xl font-semibold">{selectedTask.title}</h2>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-[#c3cdc0]">
-                      {selectedTask.description}
-                    </p>
-                  </div>
-                  <TaskStatusBadge status={selectedTask.status} />
-                </div>
+        <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+          <SectionTitle title="Task Detail" />
+          {selectedTask && contract ? (
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <DetailBlock
+                title="spec"
+                lines={[
+                  `objective = ${selectedTask.title}`,
+                  `instructions = ${contract.instructions || "none"}`,
+                  `done_when = ${contract.doneWhen || "none"}`,
+                  `proof_requirements = ${contract.proofRequirements || "none"}`,
+                ]}
+              />
+              <DetailBlock
+                title="latest_submission"
+                lines={[
+                  `submitted_at = ${selectedTask.latestSubmission?.submittedAt ?? "none"}`,
+                  `asset = ${selectedTask.latestSubmission?.imageUrl ?? "none"}`,
+                  `location = ${
+                    selectedTask.latestSubmission?.location
+                      ? `${selectedTask.latestSubmission.location.latitude.toFixed(4)}, ${selectedTask.latestSubmission.location.longitude.toFixed(4)}`
+                      : "none"
+                  }`,
+                ]}
+              />
+              <DetailBlock
+                title="validation_result"
+                lines={[
+                  `valid = ${selectedTask.validation?.valid ?? "pending"}`,
+                  `reason = ${selectedTask.validation?.reason ?? "none"}`,
+                  `agent_decision = ${selectedTask.validation?.agentDecision ?? "pending"}`,
+                ]}
+              />
+              <DetailBlock
+                title="payout_state"
+                lines={[
+                  `status = ${selectedTask.payout?.status ?? "not_started"}`,
+                  `amount = ${selectedTask.rewardAmount} ${selectedTask.rewardCurrency}`,
+                  `released_at = ${selectedTask.payout?.releasedAt ?? "none"}`,
+                ]}
+              />
+            </div>
+          ) : (
+            <div className="mt-5">
+              <EmptyState copy="Select a task to inspect detail." />
+            </div>
+          )}
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <DetailCard
-                    label="Reward"
-                    value={formatMoney(selectedTask.rewardAmount, selectedTask.rewardCurrency)}
-                  />
-                  <DetailCard
-                    label="Proof type"
-                    value={selectedTask.proofType.replaceAll("_", " + ")}
-                  />
-                  <DetailCard label="Request code" value={selectedTask.requestCode} mono />
-                  <DetailCard label="Deadline" value={formatDate(selectedTask.deadline)} />
-                  <DetailCard label="Owner" value={selectedTask.owner.name} />
-                  <DetailCard label="Worker" value={selectedTask.worker?.name ?? "Unassigned"} />
-                </div>
-
-                <div className="rounded-[24px] border border-white/10 bg-[#071110] p-5">
-                  <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                    Validation
-                  </div>
-                  <p className="mt-4 text-sm leading-7 text-[#c3cdc0]">
-                    {selectedTask.validation?.reason ?? "No proof has been submitted yet."}
-                  </p>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <DetailCard
-                      label="Agent decision"
-                      value={
-                        selectedTask.validation?.agentDecision
-                          ? selectedTask.validation.agentDecision.replaceAll("_", " ")
-                          : "No decision yet"
-                      }
-                    />
-                    <DetailCard
-                      label="Payout status"
-                      value={selectedTask.payout?.status ?? "Not started"}
-                    />
-                  </div>
-
-                  {selectedTask.latestSubmission ? (
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <DetailCard
-                        label="Proof asset"
-                        value={selectedTask.latestSubmission.imageUrl ?? "No image supplied"}
-                      />
-                      <DetailCard
-                        label="Proof location"
-                        value={
-                          selectedTask.latestSubmission.location
-                            ? `${selectedTask.latestSubmission.location.latitude.toFixed(4)}, ${selectedTask.latestSubmission.location.longitude.toFixed(4)}`
-                            : "No location supplied"
-                        }
-                      />
-                    </div>
-                  ) : null}
-                </div>
-
-                {selectedTask.status === "pending_approval" ? (
-                  <form action={approveTaskAction} className="flex justify-end">
-                    <input type="hidden" name="taskId" value={selectedTask.id} />
-                    <button
-                      type="submit"
-                      className="rounded-full bg-[#d9ff66] px-6 py-3 text-sm font-semibold text-[#071110] transition hover:opacity-90"
-                    >
-                      Approve payout
-                    </button>
-                  </form>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-4">
-                <EmptyState copy="Select a task to inspect its lifecycle details." />
-              </div>
-            )}
-          </div>
+          {selectedTask?.status === "pending_approval" ? (
+            <form action={approveTaskAction} className="mt-5">
+              <input type="hidden" name="taskId" value={selectedTask.id} />
+              <button
+                type="submit"
+                className="rounded-full bg-[#171717] px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] text-white transition hover:bg-black"
+              >
+                approve_payout
+              </button>
+            </form>
+          ) : null}
         </section>
       </div>
     </main>
@@ -490,104 +433,74 @@ function AuthGate({
   error: string
 }) {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1b3432,transparent_28%),linear-gradient(180deg,#031110,#020707)] px-6 py-8 text-[#f3f5ec] md:px-12">
-      <div className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/20">
-        <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">{title}</div>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">Start an owner session</h1>
-        <p className="mt-4 text-sm leading-7 text-[#c3cdc0]">{description}</p>
+    <main className="min-h-screen bg-[#f3ede3] px-4 py-6 text-[#171717]">
+      <div className="mx-auto max-w-3xl rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+        <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">{title}</div>
+        <div className="mt-3 font-mono text-sm text-[#4e473d]">{description}</div>
 
         {error ? (
-          <div className="mt-6 rounded-2xl border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ffd7d7]">
+          <div className="mt-5 rounded-[20px] border border-[#a2322d]/20 bg-[#ffefec] px-4 py-3 font-mono text-xs text-[#a2322d]">
             {error}
           </div>
         ) : null}
 
-        <form action={formAction} className="mt-8 space-y-4">
+        <div className="mt-5 space-y-3">
           {users.map((user) => (
-            <button
-              key={user.id}
-              type="submit"
-              name="userId"
-              value={user.id}
-              className="flex w-full items-center justify-between rounded-[24px] border border-white/10 bg-[#071110] px-5 py-4 text-left transition hover:border-white/30"
-            >
-              <span className="font-semibold">{user.name}</span>
-              <span className="text-xs uppercase tracking-[0.18em] text-[#8ea38d]">
-                Sign in
-              </span>
-            </button>
+            <form key={user.id} action={formAction}>
+              <button
+                type="submit"
+                name="userId"
+                value={user.id}
+                className="w-full rounded-[20px] border border-black/10 bg-white px-4 py-4 text-left font-mono text-sm transition hover:border-black/30"
+              >
+                {user.name}
+              </button>
+            </form>
           ))}
-        </form>
+        </div>
       </div>
     </main>
   )
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
-      <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">{label}</div>
-      <div className="mt-4 text-3xl font-semibold">{value}</div>
-    </div>
-  )
+function SectionTitle({ title }: { title: string }) {
+  return <h2 className="font-mono text-sm uppercase tracking-[0.18em] text-[#4e473d]">{title}</h2>
 }
 
 function Field({
   label,
+  hint,
   children,
 }: {
   label: string
+  hint: string
   children: ReactNode
 }) {
   return (
-    <label className="space-y-2">
-      <span className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">{label}</span>
+    <label className="block space-y-2">
+      <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#4e473d]">{label}</div>
+      <div className="font-mono text-xs text-[#756b5e]">{hint}</div>
       {children}
     </label>
   )
 }
 
-function DetailCard({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string
-  value: string
-  mono?: boolean
-}) {
-  return (
-    <div className="rounded-[20px] border border-white/10 bg-[#071110] p-4">
-      <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">{label}</div>
-      <div className={`mt-3 text-sm text-[#f3f5ec] ${mono ? "font-mono" : ""}`}>{value}</div>
-    </div>
-  )
-}
-
 function EmptyState({ copy }: { copy: string }) {
   return (
-    <div className="rounded-[24px] border border-dashed border-white/10 px-4 py-6 text-sm leading-7 text-[#8ea38d]">
+    <div className="rounded-[20px] border border-dashed border-black/10 bg-white px-4 py-5 font-mono text-sm text-[#756b5e]">
       {copy}
     </div>
   )
 }
 
-function TaskStatusBadge({ status }: { status: string }) {
-  const className =
-    status === "paid"
-      ? "bg-[#d9ff66] text-[#071110]"
-      : status === "pending_approval"
-        ? "bg-[#ffc857] text-[#071110]"
-        : status === "rejected"
-          ? "bg-[#ef4444] text-white"
-          : "border border-white/10 bg-white/[0.03] text-[#f3f5ec]"
-
+function DetailBlock({ title, lines }: { title: string; lines: string[] }) {
   return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${className}`}
-    >
-      {status.replaceAll("_", " ")}
-    </span>
+    <div className="rounded-[20px] border border-black/10 bg-white p-4">
+      <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">{title}</div>
+      <pre className="mt-4 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">
+        {lines.join("\n")}
+      </pre>
+    </div>
   )
 }
 
@@ -599,4 +512,8 @@ function defaultDeadlineValue() {
   const hour = `${date.getHours()}`.padStart(2, "0")
   const minute = `${date.getMinutes()}`.padStart(2, "0")
   return `${year}-${month}-${day}T${hour}:${minute}`
+}
+
+function shortDate(value: string) {
+  return formatDate(value)
 }

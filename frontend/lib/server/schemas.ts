@@ -11,7 +11,7 @@ export const createTaskSchema = z.object({
   ownerId: z.string().min(1),
   agentRef: z.string().trim().optional(),
   title: z.string().trim().min(3).max(120),
-  description: z.string().trim().min(10).max(500),
+  description: z.string().trim().min(10).max(2000),
   rewardAmount: z.number().positive(),
   rewardCurrency: z.string().trim().min(3).max(10).default("USD"),
   deadline: z.string().datetime(),

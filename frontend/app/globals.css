@@ -1,25 +1,25 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #031110;
-  --foreground: #f3f5ec;
-  --card: #0a1715;
-  --card-foreground: #f3f5ec;
-  --popover: #0a1715;
-  --popover-foreground: #f3f5ec;
-  --primary: #d9ff66;
-  --primary-foreground: #071110;
-  --secondary: #12211e;
-  --secondary-foreground: #f3f5ec;
-  --muted: #0d1918;
-  --muted-foreground: #8ea38d;
-  --accent: #d9ff66;
-  --accent-foreground: #071110;
+  --background: #f3ede3;
+  --foreground: #171717;
+  --card: #fffaf2;
+  --card-foreground: #171717;
+  --popover: #fffaf2;
+  --popover-foreground: #171717;
+  --primary: #171717;
+  --primary-foreground: #ffffff;
+  --secondary: #f6efe4;
+  --secondary-foreground: #171717;
+  --muted: #efe7da;
+  --muted-foreground: #756b5e;
+  --accent: #f6efe4;
+  --accent-foreground: #171717;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: #102220;
-  --ring: #d9ff66;
+  --border: rgba(23, 23, 23, 0.12);
+  --input: #ffffff;
+  --ring: #171717;
   --radius: 1.25rem;
 }
 
@@ -56,7 +56,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     @apply min-h-screen bg-background text-foreground;
