@@ -33,10 +33,12 @@
   - tracks whether payment is pending, released, rejected, or awaiting approval
 
 ## Implemented Next.js Server Modules
+- `frontend/lib/server/db.ts`
+  - Postgres bootstrap, seeded users, transactions, and health checks
+- `frontend/lib/server/session.ts`
+  - signed cookie sessions for owner and worker actions
 - `frontend/lib/server/task-service.ts`
   - list, create, accept, submit, approve, hydrate task views
-- `frontend/lib/server/demo-store.ts`
-  - demo users/tasks/submissions/validation/payouts
 - `frontend/lib/server/schemas.ts`
   - request validation for route handlers and actions
 - `frontend/lib/server/errors.ts`
@@ -74,21 +76,21 @@
   - `requires_approval`
 
 ## Payment Strategy
-- Current implementation uses task-service payout transitions in an in-memory demo store.
-- Keep interfaces ready for future contract integration once durable storage is added.
+- Current implementation uses task-service payout transitions persisted in Postgres.
+- Keep interfaces ready for future contract integration once the real payout rail is added.
 - Target hackathon execution rail: `Hedera`.
 
 ## Human Verification Strategy
-- Current implementation trusts seeded demo users marked as verified humans.
+- Current implementation uses signed demo sessions plus seeded verified workers in Postgres.
 - Target hackathon identity layer: `World`.
 - `World` should support both:
   - verified human workers
   - human-backed agents making payout decisions
 
 ## Storage Strategy
-- Current implementation uses an in-memory demo store.
+- Current implementation uses Postgres as the source of truth for users, tasks, submissions, validations, and payouts.
 - For demo speed, proof payloads remain inline values rather than durable media objects.
-- Replace this with hosted persistence in a later pass.
+- Proof media storage still needs a dedicated production path.
 - `0G` is deferred for now and should not be part of the active implementation path.
 
 ## Manual Approval Strategy
@@ -134,4 +136,5 @@
 
 ## Verification Notes
 - Root `npm run build` passes and builds the Next.js app with Webpack in this environment.
+- `npm --prefix frontend run test` passes against the lifecycle suite using `pg-mem`.
 - The app exposes `/`, `/app`, `/work`, and the task JSON routes under `/api/*`.

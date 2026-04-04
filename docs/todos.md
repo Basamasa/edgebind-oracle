@@ -39,19 +39,20 @@
 ## Phase 6: Polish
 - [ ] Align naming and shared status enums across backend/mobile/frontend.
 - [ ] Add lightweight comments where logic is non-obvious.
-- [ ] Add basic verification tests for lifecycle transitions.
+- [x] Add basic verification tests for lifecycle transitions.
 - [x] Refresh docs after each implementation phase.
 - [x] Add root-level developer workflow scripts for simpler local startup.
 
 ## Remaining Work
-- [ ] Add real auth/session gating instead of worker/owner selection by query string or hidden form fields.
-- [ ] Restrict payout approval so only the task owner or an explicit admin approver can approve a pending payout.
+- [x] Add real auth/session gating instead of worker/owner selection by query string or hidden form fields.
+- [x] Restrict payout approval so only the task owner or an explicit admin approver can approve a pending payout.
 - [ ] Integrate mobile against the new Next.js API routes when that parallel work is ready.
 - [ ] Add a shared package or shared folder for API DTOs.
-- [ ] Replace the in-memory demo store with durable hosted persistence for Vercel deployment.
+- [x] Replace the in-memory demo store with durable hosted persistence for Vercel deployment.
 - [ ] Integrate `World` as the human verification foundation for both workers and human-backed agents.
 - [ ] Integrate `Hedera` for payout execution.
 - [ ] Integrate `Ledger` for higher-risk manual approval flow.
 - [ ] `0G` deferred until after the core hackathon loop is fully working.
-- [ ] Add runtime/API smoke tests once the environment allows loopback connections or a test harness is added.
-- [ ] Add lifecycle tests that prove payment cannot move before validation and proof submission.
+- [ ] Add runtime/API smoke tests against the deployed environment.
+- [x] Add lifecycle tests that prove payment cannot move before validation and proof submission.
+- [ ] Provision and document the production Postgres instance and environment variables for Vercel.

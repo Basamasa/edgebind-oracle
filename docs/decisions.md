@@ -14,9 +14,9 @@
 - Reason: the requested product language is task/worker/owner/submission/payout, and the current mobile `request` concept is really a task.
 - Impact: mobile can be refactored carefully, and the backend/web should adopt task terminology consistently.
 
-### 4. Use An In-Memory Demo Store For The Rewrite Milestone
-- Reason: the immediate goal is a pure Next.js reset and demoable flow, not full infrastructure setup.
-- Impact: the app is easy to run and deploy, but persistence is not durable yet.
+### 4. Replace The In-Memory Store With Postgres Before External Integrations
+- Reason: the execution guarantee is not credible on serverless without durable state and transaction-safe lifecycle updates.
+- Impact: tasks, submissions, validations, and payouts now persist in Postgres, while external integrations remain a later layer.
 
 ### 5. Treat World As The Shared Human Identity Layer
 - Reason: the hackathon narrative is stronger if both workers and human-backed agents are grounded in the same human-verification foundation.
@@ -63,12 +63,16 @@
 - Impact: agent memory/task history are postponed until the main loop is complete.
 
 ### 16. Treat Current Integrations As Claimed Targets, Not Completed Wiring
-- Reason: the UI currently references `World`, `Hedera`, and `Ledger`, but the implementation is still a local demo store plus server-side status transitions.
+- Reason: the implementation now has durable lifecycle state, but `World`, `Hedera`, and `Ledger` are still not wired.
 - Impact: audit and planning should classify these as stubs until real gating or realistic simulation is added.
 
 ### 17. Treat Deployment Safety As A Separate Requirement From Local Demo Correctness
-- Reason: the in-memory store makes the local flow coherent, but it cannot provide reliable guarantees on Vercel/serverless.
-- Impact: execution guarantees should not be considered satisfied until persistence and authority checks are durable.
+- Reason: persistence and authority checks are now durable, but deployed env wiring and external integrations still matter separately.
+- Impact: passing local lifecycle tests is necessary but not sufficient for production readiness.
+
+### 18. Use Signed Cookie Sessions As The Interim Auth Layer
+- Reason: hidden form fields and query-string actor switching were too weak for the execution-layer model.
+- Impact: owner and worker actions are now bound to demo sessions, while real identity integration remains a later step.
 
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.

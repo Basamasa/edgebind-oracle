@@ -14,18 +14,24 @@
   - `frontend/app/app/page.tsx`
   - `frontend/app/work/page.tsx`
   - `frontend/app/api/**`
-  - `frontend/lib/server/demo-store.ts`
+  - `frontend/app/auth/actions.ts`
+  - `frontend/lib/server/db.ts`
+  - `frontend/lib/server/session.ts`
   - `frontend/lib/server/task-service.ts`
+  - `frontend/tests/lifecycle.test.ts`
 - Implemented app capabilities:
   - landing page plus owner dashboard under `/app`
   - worker console under `/work`
+  - cookie-bound demo auth for owner and worker sessions
   - Next.js route handlers for users, tasks, task detail, accept, submit, approve, and owner task list
-  - server-side task lifecycle logic inside the Next.js app
+  - database-backed task lifecycle logic inside the Next.js app
   - explicit post-validation agent decision (`auto_pay` vs `requires_approval`)
   - server actions for owner task creation/approval and worker accept/submit flows
-  - seeded demo store with open, accepted, pending approval, paid, and rejected tasks
-- The current demo store is in-memory and suited for demo flow, not durable production persistence.
-- Audit result: the app behaves like an execution-layer demo, not a marketplace, but several core guarantees are still demo-only rather than production-enforced.
+  - proof-aware owner approval detail with latest submission data
+  - lifecycle verification tests using `pg-mem`
+- The active persistence path now requires `DATABASE_URL` and creates/uses real Postgres tables.
+- Demo users are seeded into the database during bootstrap; task state is no longer stored in memory.
+- Audit result: the core execution loop is now deployment-shaped, but `World`/`Hedera`/`Ledger` are still not implemented.
 
 ## Mobile
 - Stack: Vite + React 19 + TypeScript PWA-style app.
@@ -61,19 +67,18 @@
 
 ## Missing Pieces
 - Shared types between apps.
-- Real auth/session model.
-- Durable hosted persistence for Vercel deployment.
 - Real `World`/`Hedera`/`Ledger` integrations.
 - Real worker client integration against the new Next.js API routes.
-- Automated tests beyond build verification.
-- Strong approval authorization: any owner/admin can currently approve any pending task.
-- Real deployment-safe state guarantees: the in-memory store will not behave reliably across serverless instances.
+- Hosted production database wiring and env setup on the actual deployment target.
+- Stronger auth than demo cookie sessions.
+- Media storage for proof assets beyond inline demo strings.
+- Broader automated test coverage beyond lifecycle service tests.
 
 ## Current Recommendation
 - Keep API and UI together inside the Next.js app.
 - Use the web app as the end-to-end hackathon demo surface while mobile is developed separately.
-- Replace the demo in-memory store with a hosted database in a later pass.
+- Use the DB-backed core as the baseline for all future work.
 - Model `World` as the identity layer for both workers and human-backed agents, not just workers.
 - Defer `0G` entirely until the core product loop is complete and stable.
 - Keep mobile untouched during the rewrite.
-- Treat the current state as an internal demo milestone, not a ready execution-guarantee product.
+- Treat the current state as a production-shaped core loop that still needs external integrations before final demo claims.

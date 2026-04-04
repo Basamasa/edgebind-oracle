@@ -79,6 +79,7 @@
 - Implement a single pure Next.js app as both UI and API/runtime.
 - Use `/app` for owners and `/work` for workers in the deployed demo.
 - Do not modify the mobile app in this pass.
+- Make the core lifecycle durable and authorization-bound before adding external integrations.
 
 ## Hackathon Integration Intent
 - `World` is the identity and verification foundation for both verified human workers and human-backed agents.
