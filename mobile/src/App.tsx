@@ -9,17 +9,13 @@ import TabBar from './screens/TabBar'
 import { MOCK_REQUESTS, GRADIENT } from './data/mock'
 import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
+import { loadSettings } from './data/settings'
+import type { AppMode } from './data/settings'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
 type View = 'list' | 'capture' | 'history' | 'create' | 'about' | 'profile'
 
-interface Coords {
-  lat: number
-  lng: number
-  accuracy: number
-}
-
-const BACKEND = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000'
+interface Coords { lat: number; lng: number; accuracy: number }
 
 export default function App() {
   const [user, setUser] = useState<string | null>(null)
@@ -32,8 +28,12 @@ export default function App() {
   const [ts, setTs] = useState('')
   const [clock, setClock] = useState(new Date().toLocaleTimeString())
   const [err, setErr] = useState('')
-  const [usingMock, setUsingMock] = useState(false)
   const [historyCount, setHistoryCount] = useState(0)
+
+  // mode and backend url from settings
+  const [appMode, setAppMode] = useState<AppMode>(loadSettings().mode)
+  const [backendUrl, setBackendUrl] = useState(loadSettings().backendUrl)
+  const isDemo = appMode === 'demo'
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -48,13 +48,15 @@ export default function App() {
     setHistoryCount(loadHistory(user ?? '').length)
   }, [view, user])
 
+  // load requests — mock in demo mode, real in live mode
   useEffect(() => {
     if (!user) return
-    fetch(`${BACKEND}/api/requests`)
+    if (isDemo) { setRequests(MOCK_REQUESTS); return }
+    fetch(`${backendUrl}/api/requests`)
       .then(r => r.json())
-      .then(data => { setRequests(data); setUsingMock(false) })
-      .catch(() => { setRequests(MOCK_REQUESTS); setUsingMock(true) })
-  }, [user])
+      .then(data => setRequests(data))
+      .catch(() => { setRequests(MOCK_REQUESTS) })
+  }, [user, appMode, backendUrl])
 
   const startCam = useCallback(async () => {
     try {
@@ -64,9 +66,7 @@ export default function App() {
       })
       streamRef.current = s
       if (videoRef.current) videoRef.current.srcObject = s
-    } catch {
-      setErr('Camera unavailable — check browser permissions')
-    }
+    } catch { setErr('Camera unavailable — check browser permissions') }
   }, [])
 
   const stopCam = useCallback(() => {
@@ -96,8 +96,7 @@ export default function App() {
   }
 
   const capture = () => {
-    const v = videoRef.current
-    const c = canvasRef.current
+    const v = videoRef.current; const c = canvasRef.current
     if (!v || !c) return
     c.width = v.videoWidth; c.height = v.videoHeight
     c.getContext('2d')!.drawImage(v, 0, 0)
@@ -111,35 +110,28 @@ export default function App() {
   const submit = async () => {
     if (!photo || !coords || !request) { setErr('Missing photo, GPS or request'); return }
     setScreen('submitting')
-    if (usingMock) {
-      setTimeout(() => {
-        saveToHistory(user ?? '', {
-          requestId: request.requestId,
-          description: request.description ?? 'Verify location',
-          lat: coords.lat,
-          lng: coords.lng,
-          ts,
-          photo: photo!,
-        })
-        setScreen('success')
-      }, 1500)
+
+    const saveEntry = () => saveToHistory(user ?? '', {
+      requestId: request.requestId,
+      description: request.description ?? 'Verify location',
+      lat: coords.lat, lng: coords.lng, ts, photo: photo!,
+    })
+
+    // demo mode — simulate
+    if (isDemo) {
+      setTimeout(() => { saveEntry(); setScreen('success') }, 1500)
       return
     }
+
+    // live mode — real backend
     try {
-      const res = await fetch(`${BACKEND}/api/verify`, {
+      const res = await fetch(`${backendUrl}/api/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: request.requestId, photo, latitude: coords.lat, longitude: coords.lng, timestamp: ts }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
-      saveToHistory(user ?? '', {
-        requestId: request.requestId,
-        description: request.description ?? 'Verify location',
-        lat: coords.lat,
-        lng: coords.lng,
-        ts,
-        photo: photo!,
-      })
+      saveEntry()
       setScreen('success')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Submission failed')
@@ -149,87 +141,56 @@ export default function App() {
 
   const signOut = () => { setUser(null); stopCam(); setView('list') }
 
-  // tab bar — hidden during capture
-  const showTabs = view !== 'capture'
-  const tabBar = showTabs ? (
-    <TabBar
-      active={view as any}
-      onChange={(tab) => { stopCam(); setView(tab) }}
-      historyCount={historyCount}
-    />
-  ) : null
+  const handleModeChange = (mode: AppMode, url: string) => {
+    setAppMode(mode); setBackendUrl(url)
+  }
 
-  const topBar = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
-      <div style={{ fontSize: '13px', color: '#555' }}>
-        Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
-      </div>
-      {usingMock && (
-        <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>
-          demo mode
-        </div>
-      )}
+  // mode badge shown in top bar
+  const modeBadge = (
+    <div style={{
+      fontSize: '10px', fontWeight: 500,
+      padding: '2px 8px', borderRadius: '4px',
+      background: isDemo ? '#1a1a1a' : 'rgba(29,158,117,0.15)',
+      color: isDemo ? '#555' : '#1D9E75',
+      border: `0.5px solid ${isDemo ? '#2a2a2a' : 'rgba(29,158,117,0.3)'}`,
+    }}>
+      {isDemo ? 'demo' : 'live'}
     </div>
   )
 
+  const topBar = (showBack?: () => void) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {showBack && (
+          <button onClick={showBack} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← back</button>
+        )}
+        {!showBack && <div style={{ fontSize: '13px', color: '#555' }}>Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span></div>}
+      </div>
+      {modeBadge}
+    </div>
+  )
+
+  const showTabs = view !== 'capture'
+  const tabBar = showTabs ? <TabBar active={view as any} onChange={(tab) => { stopCam(); setView(tab) }} historyCount={historyCount} /> : null
+
   if (!user) return <Login onLogin={setUser} />
 
-  if (view === 'history') return (
-    <>
-      <History onBack={() => setView('list')} user={user} onSignOut={signOut} />
-      {tabBar}
-    </>
-  )
-
-  if (view === 'create') return (
-    <>
-      <CreateRequest
-        onBack={() => setView('list')}
-        onCreated={(r) => { setRequests(prev => [r, ...prev]); setView('list') }}
-        user={user}
-        onSignOut={signOut}
-      />
-      {tabBar}
-    </>
-  )
-
-  if (view === 'about') return (
-    <>
-      <About user={user} onSignOut={signOut} />
-      {tabBar}
-    </>
-  )
-
-  if (view === 'profile') return (
-    <>
-      <Profile user={user} onSignOut={signOut} />
-      {tabBar}
-    </>
-  )
+  if (view === 'history') return (<><History onBack={() => setView('list')} user={user} onSignOut={signOut} />{tabBar}</>)
+  if (view === 'create') return (<><CreateRequest onBack={() => setView('list')} onCreated={(r) => { setRequests(prev => [r, ...prev]); setView('list') }} user={user} onSignOut={signOut} />{tabBar}</>)
+  if (view === 'about') return (<><About user={user} onSignOut={signOut} />{tabBar}</>)
+  if (view === 'profile') return (<><Profile user={user} onSignOut={signOut} onModeChange={handleModeChange} />{tabBar}</>)
 
   if (view === 'list') return (
     <>
-      <RequestList
-        requests={requests}
-        onSelect={selectRequest}
-        user={user}
-        onSignOut={signOut}
-        onHistory={() => setView('history')}
-        historyCount={historyCount}
-        onCreate={() => setView('create')}
-      />
+      <RequestList requests={requests} onSelect={selectRequest} user={user} onSignOut={signOut} onHistory={() => setView('history')} historyCount={historyCount} onCreate={() => setView('create')} />
       {tabBar}
     </>
   )
 
-  // capture flow — no tab bar
   if (screen === 'ready') return (
     <div style={page}>
-      {topBar}
+      {topBar(backToList)}
       <div style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <button onClick={backToList} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← back</button>
-        </div>
         {request && (
           <>
             <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>{request.description}</div>
@@ -257,7 +218,7 @@ export default function App() {
 
   if (screen === 'preview') return (
     <div style={page}>
-      {topBar}
+      {topBar()}
       <div style={{ margin: '12px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
         {photo && <img src={photo} alt="proof" style={{ width: '100%', display: 'block' }} />}
       </div>
@@ -285,7 +246,7 @@ export default function App() {
   if (screen === 'submitting') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', border: '2.5px solid #E040B0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <div style={{ fontSize: '15px', color: '#888' }}>{usingMock ? 'Simulating submission...' : 'Submitting proof on-chain...'}</div>
+      <div style={{ fontSize: '15px', color: '#888' }}>{isDemo ? 'Simulating submission...' : 'Submitting proof on-chain...'}</div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
@@ -297,7 +258,7 @@ export default function App() {
       </div>
       <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>Proof submitted</div>
       <div style={{ fontSize: '14px', color: '#666', textAlign: 'center', marginBottom: '32px', lineHeight: 1.6 }}>
-        {usingMock ? 'Demo mode — no real transaction.' : 'Attestation sent. Dashboard will update shortly.'}
+        {isDemo ? 'Demo mode — no real transaction.' : 'Attestation sent. Dashboard will update shortly.'}
       </div>
       <div style={{ width: '100%', ...card, margin: 0 }}>
         {[
