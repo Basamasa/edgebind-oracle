@@ -10,6 +10,7 @@ import { getWorldConfig } from "@/lib/world"
 import { getHederaConfig } from "@/lib/server/hedera"
 import { WorldOwnerVerify } from "@/components/world-owner-verify"
 import { LiveRefresh } from "@/components/live-refresh"
+import { AgentTokenPanel } from "@/components/agent-token-panel"
 
 import { approveTaskAction, createTaskAction } from "../app/actions"
 
@@ -423,6 +424,8 @@ export default async function OwnerPage({
           </section>
 
           <div className="space-y-6">
+            <AgentTokenPanel />
+
             <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-5 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
               <SectionTitle title="System Decision" />
               <pre className="mt-5 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">

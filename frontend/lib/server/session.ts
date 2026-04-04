@@ -7,6 +7,8 @@ import type { UserRole, UserSummary } from "@/lib/domain"
 import { AppError } from "@/lib/server/errors"
 
 const SESSION_COOKIE_NAME = "edgebind_session"
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
+const SESSION_MAX_AGE_MS = SESSION_MAX_AGE_SECONDS * 1000
 
 type SessionPayload = UserSummary & {
   issuedAt: number
@@ -60,7 +62,16 @@ function parseToken(token: string | undefined) {
     return null
   }
 
-  return decode(encodedPayload)
+  const payload = decode(encodedPayload)
+  if (!payload) {
+    return null
+  }
+
+  if (Date.now() - payload.issuedAt > SESSION_MAX_AGE_MS) {
+    return null
+  }
+
+  return payload
 }
 
 function bearerToken(request: NextRequest) {
@@ -175,7 +186,7 @@ export async function setSession(user: UserSummary) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   })
 }
 

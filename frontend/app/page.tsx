@@ -6,6 +6,7 @@ const endpoints = [
   { method: "GET", path: "/api/world/config", note: "read world status" },
   { method: "POST", path: "/api/world/rp-signature", note: "mint owner rp context" },
   { method: "POST", path: "/api/world/verify", note: "verify owner proof" },
+  { method: "POST", path: "/api/auth/agent/token", note: "generate bearer token from verified owner session" },
   { method: "POST", path: "/api/auth/dev/session", note: "local dev only" },
   { method: "GET", path: "/api/auth/session", note: "read current identity" },
   { method: "POST", path: "/api/tasks", note: "create task" },
@@ -19,9 +20,9 @@ const endpoints = [
 
 const runbook = [
   "GET /api/world/config",
-  "bootstrap owner session in local dev",
-  "open /owner for owner world verification",
-  "GET /api/auth/session until humanVerified = true",
+  "owner opens /owner and completes World verification",
+  "owner generates agent token",
+  "external agent stores bearer token",
   "POST /api/tasks",
   "worker verifies in mobile",
   "worker accepts",
@@ -42,13 +43,22 @@ const inspectSessionCurl = `curl http://localhost:3000/api/auth/session \\
 
 const verifyOwnerStep = `open http://localhost:3000/owner
 
-# sign in
 # verify with World
-# then re-run GET /api/auth/session`
+# then generate agent token`
+
+const createAgentTokenCurl = `curl -X POST http://localhost:3000/api/auth/agent/token \\
+  -b cookies.txt`
+
+const agentTokenResponse = `{
+  "ok": true,
+  "token": "eyJ...",
+  "tokenType": "Bearer",
+  "expiresInSeconds": 604800
+}`
 
 const createTaskCurl = `curl -X POST http://localhost:3000/api/tasks \\
   -H "Content-Type: application/json" \\
-  -b cookies.txt \\
+  -H "Authorization: Bearer eyJ..." \\
   -d '{
     "agentRef": "dispatch-scout",
     "title": "Photograph station entrance",
@@ -77,7 +87,8 @@ const createTaskResponse = `{
 
 const pollTaskCurl = `curl http://localhost:3000/api/tasks/task_...`
 
-const productionTarget = `target.owner_identity = verified human behind agent wallet
+const productionTarget = `target.owner_identity = verified human behind agent
+target.agent_access = bearer token from verified owner
 target.worker_identity = verified human executor
 target.payout_rail = Hedera
 target.manual_approval = inside runtime
@@ -126,7 +137,8 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
                 </h1>
                 <p className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
                   This page is for external agents. The API is the primary interface. The owner
-                  web exists for World verification and manual approval when payout risk is high.
+                  web exists for World verification, agent token generation, and manual approval
+                  when payout risk is high.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -196,12 +208,14 @@ relay_url_configured = ${String(world.relayUrlConfigured)}`
         <section className="grid gap-6 xl:grid-cols-2">
           <CommandCard title="0.read_world_config" code={statusCurl} />
           <CommandCard title="1.bootstrap_local_dev" code={devSessionCurl} />
-          <CommandCard title="2.inspect_session" code={inspectSessionCurl} />
+          <CommandCard title="2.inspect_cookie_session" code={inspectSessionCurl} />
           <CommandCard title="3.complete_owner_verification" code={verifyOwnerStep} />
-          <CommandCard title="4.create_task" code={createTaskCurl} />
-          <CommandCard title="5.create_task_response" code={createTaskResponse} />
-          <CommandCard title="6.poll_task_state" code={pollTaskCurl} />
-          <CommandCard title="7.production_target" code={productionTarget} />
+          <CommandCard title="4.generate_agent_token" code={createAgentTokenCurl} />
+          <CommandCard title="5.agent_token_response" code={agentTokenResponse} />
+          <CommandCard title="6.create_task" code={createTaskCurl} />
+          <CommandCard title="7.create_task_response" code={createTaskResponse} />
+          <CommandCard title="8.poll_task_state" code={pollTaskCurl} />
+          <CommandCard title="9.production_target" code={productionTarget} />
         </section>
       </div>
     </main>
