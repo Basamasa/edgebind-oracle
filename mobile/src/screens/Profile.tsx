@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { page, card, gradientBtn, ghostBtn } from '../data/styles'
+import { page, card, gradientBtn } from '../data/styles'
 import { GRADIENT } from '../data/mock'
 import { loadHistory } from './History'
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, pingBackend } from '../data/settings'
-import type { AppMode } from '../data/settings'
+import { loadSettings } from '../data/settings'
 import type { WorkerSummary } from '../data/types'
 import { fetchWorkerProfile, updateWorkerPayoutAccount } from '../data/api'
 
@@ -11,27 +10,19 @@ interface Props {
   user: WorkerSummary
   token: string
   onSignOut: () => void
-  onModeChange: (mode: AppMode, url: string) => void
   onProfileUpdate: (user: WorkerSummary) => void
 }
 
-export default function Profile({ user, token, onSignOut, onModeChange, onProfileUpdate }: Props) {
+export default function Profile({ user, token, onSignOut, onProfileUpdate }: Props) {
   const history = loadHistory(user.id)
   const initials = 'WH'
 
   const settings = loadSettings()
-  const [mode, setMode] = useState<AppMode>(settings.mode)
-  const [backendUrl, setBackendUrl] = useState(settings.backendUrl)
-  const [pinging, setPinging] = useState(false)
-  const [pingResult, setPingResult] = useState<'ok' | 'fail' | null>(null)
+  const mode = settings.mode
   const [payoutAccountId, setPayoutAccountId] = useState(user.payoutAccountId ?? '')
   const [savingPayout, setSavingPayout] = useState(false)
   const [payoutNotice, setPayoutNotice] = useState('')
   const [payoutError, setPayoutError] = useState('')
-  const hostedRuntime =
-    typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1'
 
   useEffect(() => {
     if (mode === 'demo') {
@@ -46,22 +37,6 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
       })
       .catch(() => {})
   }, [mode, onProfileUpdate, settings.backendUrl, token, user.payoutAccountId])
-
-  const testConnection = async () => {
-    setPinging(true)
-    setPingResult(null)
-    const ok = await pingBackend(backendUrl)
-    setPingResult(ok ? 'ok' : 'fail')
-    setPinging(false)
-  }
-
-  const applySettings = () => {
-    const nextMode = hostedRuntime ? 'live' : mode
-    const nextBackendUrl = hostedRuntime ? DEFAULT_SETTINGS.backendUrl : backendUrl
-
-    saveSettings({ mode: nextMode, backendUrl: nextBackendUrl })
-    onModeChange(nextMode, nextBackendUrl)
-  }
 
   const savePayout = async () => {
     if (mode === 'demo') {
@@ -100,21 +75,54 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
 
   return (
     <div style={{ ...page, paddingBottom: '80px' }}>
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
-        <div style={{ fontSize: '13px', color: '#555' }}>Profile</div>
+        <div style={{ fontSize: '13px', color: '#555' }}>Worker profile</div>
       </div>
 
-      {/* avatar */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 20px' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', marginBottom: '12px' }}>
-          {initials}
+      <div
+        style={{
+          margin: '18px 16px 10px',
+          borderRadius: '24px',
+          padding: '22px 18px',
+          background:
+            'linear-gradient(145deg, rgba(20,20,20,1) 0%, rgba(10,10,10,1) 100%)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: '-55px',
+            right: '-20px',
+            width: '180px',
+            height: '180px',
+            background: 'radial-gradient(circle, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0) 72%)',
+          }}
+        />
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '22px', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', flexShrink: 0 }}>
+              {initials}
+            </div>
+            <div>
+              <div style={{ fontSize: '22px', color: '#f5f1ea', marginBottom: '6px' }}>Verified human</div>
+              <div style={{ fontSize: '12px', color: '#8e857a', fontFamily: 'monospace', marginBottom: '10px' }}>{user.id}</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ borderRadius: '999px', padding: '5px 10px', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'rgba(29,158,117,0.12)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
+                  world verified
+                </span>
+                <span style={{ borderRadius: '999px', padding: '5px 10px', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)', color: '#8e857a', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {mode}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '4px' }}>Verified human worker</div>
-        <div style={{ fontSize: '13px', color: '#777', fontFamily: 'monospace' }}>{user.id}</div>
       </div>
 
-      {/* stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', margin: '0 16px 4px' }}>
         <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <div style={{ fontSize: '28px', fontWeight: 500, color: '#f0f0f0', marginBottom: '4px' }}>{history.length}</div>
@@ -126,94 +134,19 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
         </div>
       </div>
 
-      {/* mode toggle */}
       <div style={card}>
-        <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
-          Connection mode
+        <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          Runtime
         </div>
-
-        {/* toggle */}
-        {hostedRuntime ? (
-          <div style={{ background: '#0f0f0f', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', border: '0.5px solid #1e1e1e', fontSize: '13px', color: '#1D9E75' }}>
-            Hosted worker app is locked to live mode.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', background: '#0f0f0f', borderRadius: '10px', padding: '3px', marginBottom: '14px', border: '0.5px solid #1e1e1e' }}>
-            {(['demo', 'live'] as AppMode[]).map(m => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: mode === m ? 500 : 400,
-                  background: mode === m ? (m === 'live' ? '#1D9E75' : '#333') : 'transparent',
-                  color: mode === m ? '#fff' : '#444',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {m === 'demo' ? 'Demo' : 'Live'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* description */}
-        <div style={{ fontSize: '12px', color: '#444', marginBottom: '14px', lineHeight: 1.6 }}>
-          {mode === 'demo'
-            ? 'Uses mock requests and simulates submissions. No backend needed — safe for testing and presentations.'
-            : 'Connects to the live task runtime, signs in as a verified worker, accepts open tasks, submits proof, and reflects payout state.'}
+        <div style={{ fontSize: '13px', color: '#f0f0f0', marginBottom: '6px' }}>Live task runtime</div>
+        <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.6, marginBottom: '12px' }}>
+          This worker app is connected to the shared Edgebind runtime.
         </div>
-
-        {/* backend URL — only shown in live mode */}
-        {(hostedRuntime || mode === 'live') && (
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', color: '#555', marginBottom: '6px' }}>Backend URL</div>
-            <input
-              style={input}
-              type="text"
-              value={hostedRuntime ? DEFAULT_SETTINGS.backendUrl : backendUrl}
-              onChange={e => {
-                if (!hostedRuntime) {
-                  setBackendUrl(e.target.value)
-                  setPingResult(null)
-                }
-              }}
-              placeholder="https://edgebind-web.vercel.app"
-              readOnly={hostedRuntime}
-            />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button
-                onClick={testConnection}
-                style={{ ...ghostBtn, padding: '8px', fontSize: '12px', flex: 1 }}
-                disabled={pinging}
-              >
-                {pinging ? 'Testing...' : 'Test connection'}
-              </button>
-              {pingResult === 'ok' && (
-                <div style={{ fontSize: '12px', color: '#1D9E75', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                  Connected
-                </div>
-              )}
-              {pingResult === 'fail' && (
-                <div style={{ fontSize: '12px', color: '#f87171', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                  Unreachable
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <button style={gradientBtn} onClick={applySettings}>
-          Save settings
-        </button>
+        <div style={{ borderRadius: '12px', border: '0.5px solid #1e1e1e', background: '#0f0f0f', padding: '12px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#777' }}>
+          {settings.backendUrl}
+        </div>
       </div>
 
-      {/* account info */}
       <div style={card}>
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Account</div>
         {[
@@ -233,8 +166,8 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
           Hedera payout
         </div>
-        <div style={{ fontSize: '12px', color: '#444', lineHeight: 1.6, marginBottom: '12px' }}>
-          Set the Hedera account that should receive released payouts. Format: <span style={{ fontFamily: 'monospace' }}>0.0.12345</span>
+        <div style={{ fontSize: '12px', color: '#444', lineHeight: 1.6, marginBottom: '14px' }}>
+          Payouts release to this Hedera account. Format: <span style={{ fontFamily: 'monospace' }}>0.0.12345</span>
         </div>
         <input
           style={input}
@@ -248,6 +181,11 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
           placeholder="0.0.12345"
           readOnly={mode === 'demo'}
         />
+        <div style={{ marginTop: '10px', fontSize: '12px', color: '#666', lineHeight: 1.6 }}>
+          {user.payoutAccountId
+            ? 'Current payout account is saved.'
+            : 'No payout account saved yet.'}
+        </div>
         {payoutNotice ? (
           <div style={{ fontSize: '12px', color: '#1D9E75', marginTop: '10px' }}>{payoutNotice}</div>
         ) : null}
@@ -265,7 +203,6 @@ export default function Profile({ user, token, onSignOut, onModeChange, onProfil
         </div>
       </div>
 
-      {/* sign out */}
       <div style={{ padding: '16px' }}>
         <button
           onClick={onSignOut}

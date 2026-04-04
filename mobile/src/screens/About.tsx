@@ -7,11 +7,44 @@ interface Props {
 }
 
 export default function About({ user, onSignOut }: Props) {
-
   const section = (title: string, body: string) => (
     <div style={card}>
       <div style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f0', marginBottom: '6px' }}>{title}</div>
       <div style={{ fontSize: '13px', color: '#666', lineHeight: 1.7 }}>{body}</div>
+    </div>
+  )
+
+  const step = (index: string, title: string, body: string) => (
+    <div
+      style={{
+        ...card,
+        display: 'grid',
+        gridTemplateColumns: '42px 1fr',
+        gap: '14px',
+        alignItems: 'start',
+      }}
+    >
+      <div
+        style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '14px',
+          background: 'rgba(255,255,255,0.04)',
+          border: '0.5px solid #252525',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '11px',
+          color: '#8a8278',
+          fontFamily: 'monospace',
+        }}
+      >
+        {index}
+      </div>
+      <div>
+        <div style={{ fontSize: '14px', color: '#f0f0f0', marginBottom: '6px' }}>{title}</div>
+        <div style={{ fontSize: '13px', color: '#666', lineHeight: 1.65 }}>{body}</div>
+      </div>
     </div>
   )
 
@@ -27,35 +60,48 @@ export default function About({ user, onSignOut }: Props) {
         </button>
       </div>
 
-      {/* hero */}
-      <div style={{ padding: '28px 16px 20px', textAlign: 'center' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '18px', background: GRADIENT, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src="/icon-512.png" alt="EdgeBind" style={{ width: '60px', height: '60px', borderRadius: '14px' }} />
-        </div>
-        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '6px' }}>EdgeBind</div>
-        <div style={{ fontSize: '13px', color: '#555', lineHeight: 1.6 }}>
-          Verified worker app
+      <div
+        style={{
+          margin: '18px 16px 14px',
+          borderRadius: '26px',
+          padding: '22px 18px',
+          background: 'linear-gradient(145deg, rgba(20,20,20,1) 0%, rgba(10,10,10,1) 100%)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <img src="/icon-512.png" alt="EdgeBind" style={{ width: '60px', height: '60px', borderRadius: '14px' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', color: '#f4efe8', marginBottom: '6px' }}>How it works</div>
+            <div style={{ fontSize: '13px', color: '#8d867a', lineHeight: 1.6 }}>
+              Accept one task. Submit one proof. Get paid when the runtime clears it.
+            </div>
+          </div>
         </div>
       </div>
 
-      {section(
-        'What is EdgeBind?',
-        'EdgeBind connects AI agents to verified human execution. This app is the worker surface: accept a task, capture proof, and submit evidence back to the runtime.'
-      )}
+      <div style={{ padding: '0 0 4px' }}>
+        {step('01', 'Accept the task', 'Open tasks come from a verified owner or agent. One task can only be taken by one worker.')}
+        {step('02', 'Capture proof', 'Follow the instructions, then submit the required photo or location proof from the app.')}
+        {step('03', 'Runtime decides', 'The backend validates proof and routes payout automatically or to approval.')}
+      </div>
 
       {section(
-        'How does it work?',
-        '1. A verified owner or agent creates a task in the runtime.\n2. A verified human worker accepts it here.\n3. The worker submits photo and location proof.\n4. The backend validates proof and routes payout automatically or to manual approval.'
-      )}
-
-      {section(
-        'What does this app do?',
-        'It is not a marketplace. It is a worker console for execution: see open tasks, accept one, capture proof, and send it to the shared runtime.'
+        'What this app is',
+        'This is a worker console, not a marketplace. You do not browse applicants or bids. You execute assigned work and submit proof.'
       )}
 
       {section(
         'Trust model',
-        'Workers are verified humans. Owners are moving to World-backed identity. Low-risk payouts auto-release after validation. High-risk payouts escalate to Ledger for approval.'
+        'Workers are verified humans. Owners create tasks, the runtime validates proof, Hedera handles payout rail, and Ledger is used only for high-risk approvals.'
+      )}
+
+      {section(
+        'Need to get paid?',
+        'Open Profile and save your Hedera account before taking live payout work.'
       )}
 
       <div style={{ textAlign: 'center', padding: '24px 16px', fontSize: '11px', color: '#333' }}>

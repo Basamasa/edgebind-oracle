@@ -280,7 +280,6 @@ export default function App() {
           user={session.user}
           token={session.token}
           onSignOut={signOut}
-          onModeChange={handleModeChange}
           onProfileUpdate={handleProfileUpdate}
         />
         {tabBar}
