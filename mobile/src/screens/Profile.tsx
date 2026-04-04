@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { page, card, gradientBtn, ghostBtn } from '../data/styles'
-import { GRADIENT, MOCK_USERS } from '../data/mock'
+import { GRADIENT } from '../data/mock'
 import { loadHistory } from './History'
-import { loadSettings, saveSettings, pingBackend } from '../data/settings'
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, pingBackend } from '../data/settings'
 import type { AppMode } from '../data/settings'
 
 interface Props {
@@ -13,14 +13,17 @@ interface Props {
 
 export default function Profile({ user, onSignOut, onModeChange }: Props) {
   const history = loadHistory(user)
-  const mockUser = MOCK_USERS.find(u => u.display === user)
-  const initials = user.slice(0, 2).toUpperCase()
+  const initials = 'WH'
 
   const settings = loadSettings()
   const [mode, setMode] = useState<AppMode>(settings.mode)
   const [backendUrl, setBackendUrl] = useState(settings.backendUrl)
   const [pinging, setPinging] = useState(false)
   const [pingResult, setPingResult] = useState<'ok' | 'fail' | null>(null)
+  const hostedRuntime =
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
 
   const testConnection = async () => {
     setPinging(true)
@@ -31,8 +34,11 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
   }
 
   const applySettings = () => {
-    saveSettings({ mode, backendUrl })
-    onModeChange(mode, backendUrl)
+    const nextMode = hostedRuntime ? 'live' : mode
+    const nextBackendUrl = hostedRuntime ? DEFAULT_SETTINGS.backendUrl : backendUrl
+
+    saveSettings({ mode: nextMode, backendUrl: nextBackendUrl })
+    onModeChange(nextMode, nextBackendUrl)
   }
 
   const input: React.CSSProperties = {
@@ -57,11 +63,11 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
 
       {/* avatar */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 20px' }}>
-        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', marginBottom: '12px' }}>
+      <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', marginBottom: '12px' }}>
           {initials}
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '4px' }}>{user}</div>
-        <div style={{ fontSize: '13px', color: '#555' }}>@{mockUser?.username ?? user.toLowerCase()}</div>
+        <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '4px' }}>Verified human worker</div>
+        <div style={{ fontSize: '13px', color: '#777', fontFamily: 'monospace' }}>{user}</div>
       </div>
 
       {/* stats */}
@@ -83,28 +89,34 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
         </div>
 
         {/* toggle */}
-        <div style={{ display: 'flex', background: '#0f0f0f', borderRadius: '10px', padding: '3px', marginBottom: '14px', border: '0.5px solid #1e1e1e' }}>
-          {(['demo', 'live'] as AppMode[]).map(m => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              style={{
-                flex: 1,
-                padding: '8px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: mode === m ? 500 : 400,
-                background: mode === m ? (m === 'live' ? '#1D9E75' : '#333') : 'transparent',
-                color: mode === m ? '#fff' : '#444',
-                transition: 'all 0.15s',
-              }}
-            >
-              {m === 'demo' ? 'Demo' : 'Live'}
-            </button>
-          ))}
-        </div>
+        {hostedRuntime ? (
+          <div style={{ background: '#0f0f0f', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', border: '0.5px solid #1e1e1e', fontSize: '13px', color: '#1D9E75' }}>
+            Hosted worker app is locked to live mode.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', background: '#0f0f0f', borderRadius: '10px', padding: '3px', marginBottom: '14px', border: '0.5px solid #1e1e1e' }}>
+            {(['demo', 'live'] as AppMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: mode === m ? 500 : 400,
+                  background: mode === m ? (m === 'live' ? '#1D9E75' : '#333') : 'transparent',
+                  color: mode === m ? '#fff' : '#444',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {m === 'demo' ? 'Demo' : 'Live'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* description */}
         <div style={{ fontSize: '12px', color: '#444', marginBottom: '14px', lineHeight: 1.6 }}>
@@ -114,15 +126,21 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
         </div>
 
         {/* backend URL — only shown in live mode */}
-        {mode === 'live' && (
+        {(hostedRuntime || mode === 'live') && (
           <div style={{ marginBottom: '12px' }}>
             <div style={{ fontSize: '11px', color: '#555', marginBottom: '6px' }}>Backend URL</div>
             <input
               style={input}
               type="text"
-              value={backendUrl}
-              onChange={e => { setBackendUrl(e.target.value); setPingResult(null) }}
+              value={hostedRuntime ? DEFAULT_SETTINGS.backendUrl : backendUrl}
+              onChange={e => {
+                if (!hostedRuntime) {
+                  setBackendUrl(e.target.value)
+                  setPingResult(null)
+                }
+              }}
               placeholder="https://edgebind-web.vercel.app"
+              readOnly={hostedRuntime}
             />
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button
@@ -155,14 +173,14 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
       <div style={card}>
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Account</div>
         {[
-          { label: 'Username', value: mockUser?.username ?? user.toLowerCase() },
-          { label: 'Display name', value: user },
-          { label: 'Role', value: 'Verified worker' },
-          { label: 'Runtime', value: mode === 'demo' ? 'Mock' : 'Live task API' },
+          { label: 'worker_id', value: user, mono: true },
+          { label: 'human_verified', value: 'true', mono: true },
+          { label: 'identity_source', value: mode === 'demo' ? 'demo_seed' : 'world_id', mono: true },
+          { label: 'runtime', value: mode === 'demo' ? 'demo' : 'live', mono: true },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1e1e1e' }}>
             <span style={{ fontSize: '13px', color: '#555' }}>{label}</span>
-            <span style={{ fontSize: '13px', color: '#f0f0f0' }}>{value}</span>
+            <span style={{ fontSize: '13px', color: '#f0f0f0', fontFamily: 'monospace' }}>{value}</span>
           </div>
         ))}
       </div>

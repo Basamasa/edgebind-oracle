@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { PoolClient } from "pg"
 
 import type {
@@ -32,6 +33,7 @@ type UserRow = {
   name: string
   role: UserSummary["role"]
   is_human_verified: boolean
+  world_nullifier: string | null
 }
 
 type TaskRow = {
@@ -586,6 +588,62 @@ export async function markUserHumanVerified(userId: string) {
     )
 
     return verified
+  })
+}
+
+export async function findOrCreateWorldWorker(worldNullifier: string) {
+  const normalizedNullifier = worldNullifier.trim().toLowerCase()
+
+  if (!normalizedNullifier) {
+    throw new AppError(400, "World nullifier is required")
+  }
+
+  return withTransaction(async (client) => {
+    const existing = await dbQuery<UserRow>(
+      `SELECT * FROM users WHERE world_nullifier = $1 LIMIT 1`,
+      [normalizedNullifier],
+      client,
+    )
+
+    if (existing.rows[0]) {
+      const row = existing.rows[0]
+
+      if (!row.is_human_verified) {
+        await dbQuery(
+          `
+            UPDATE users
+            SET is_human_verified = TRUE
+            WHERE id = $1
+          `,
+          [row.id],
+          client,
+        )
+      }
+
+      return {
+        ...mapUser(row),
+        isHumanVerified: true,
+      }
+    }
+
+    const suffix = createHash("sha256").update(normalizedNullifier).digest("hex").slice(0, 12)
+    const user = {
+      id: `worker-${suffix}`,
+      name: "Verified Worker",
+      role: "worker" as const,
+      isHumanVerified: true,
+    }
+
+    await dbQuery(
+      `
+        INSERT INTO users (id, name, role, is_human_verified, world_nullifier)
+        VALUES ($1, $2, $3, $4, $5)
+      `,
+      [user.id, user.name, user.role, true, normalizedNullifier],
+      client,
+    )
+
+    return user
   })
 }
 

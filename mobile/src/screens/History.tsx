@@ -11,7 +11,7 @@ export interface HistoryEntry {
   photo: string
 }
 
-// key by username so each user has their own history
+// key by stable worker id so each verified human keeps separate local history
 const historyKey = (user: string) => `edgebind_history_${user.toLowerCase()}`
 
 export const loadHistory = (user: string): HistoryEntry[] => {

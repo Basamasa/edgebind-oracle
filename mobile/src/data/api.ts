@@ -44,13 +44,13 @@ export async function signInWorker(baseUrl: string, userId: string) {
   return payload
 }
 
-export async function prepareWorldWorkerVerification(baseUrl: string, userId: string) {
+export async function prepareWorldWorkerVerification(baseUrl: string) {
   const response = await fetch(`${baseUrl}/api/auth/mobile/worker/world/prepare`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({}),
   })
   const payload = (await response.json()) as WorldPrepareResponse | { error?: string }
 

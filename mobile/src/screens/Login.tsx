@@ -8,7 +8,7 @@ import {
 } from '@worldcoin/idkit'
 import { GRADIENT } from '../data/mock'
 import { page, gradientBtn } from '../data/styles'
-import { fetchWorkers, prepareWorldWorkerVerification, verifyWorldWorker } from '../data/api'
+import { prepareWorldWorkerVerification, verifyWorldWorker } from '../data/api'
 import { loadSettings } from '../data/settings'
 import type { WorkerSession, WorkerSummary, WorldPrepareResponse } from '../data/types'
 
@@ -18,7 +18,6 @@ interface Props {
 
 export default function Login({ onLogin }: Props) {
   const [workers, setWorkers] = useState<WorkerSummary[]>([])
-  const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [signingIn, setSigningIn] = useState(false)
   const [err, setErr] = useState('')
@@ -29,33 +28,27 @@ export default function Login({ onLogin }: Props) {
   useEffect(() => {
     if (settings.mode === 'demo') {
       const demoWorkers: WorkerSummary[] = [
-        { id: 'worker-lina', name: 'Lina Verified', role: 'worker', isHumanVerified: true },
-        { id: 'worker-marcus', name: 'Marcus Runner', role: 'worker', isHumanVerified: true },
+        { id: 'worker-demo-alpha', name: 'Demo Worker Alpha', role: 'worker', isHumanVerified: true },
+        { id: 'worker-demo-beta', name: 'Demo Worker Beta', role: 'worker', isHumanVerified: true },
       ]
       setWorkers(demoWorkers)
-      setSelectedId(demoWorkers[0]?.id ?? '')
       setLoading(false)
       return
     }
 
-    fetchWorkers(settings.backendUrl)
-      .then((result) => {
-        setWorkers(result)
-        setSelectedId(result[0]?.id ?? '')
-      })
-      .catch((error) => setErr(error instanceof Error ? error.message : 'Failed to load workers'))
-      .finally(() => setLoading(false))
+    setWorkers([])
+    setLoading(false)
   }, [settings.backendUrl, settings.mode])
 
   const submit = async () => {
-    const worker = workers.find((entry) => entry.id === selectedId)
-
-    if (!worker) {
-      setErr('Select a verified worker')
-      return
-    }
-
     if (settings.mode === 'demo') {
+      const worker = workers[0]
+
+      if (!worker) {
+        setErr('Select a verified worker')
+        return
+      }
+
       onLogin({ ok: true, token: 'demo-worker-token', user: worker })
       return
     }
@@ -63,7 +56,7 @@ export default function Login({ onLogin }: Props) {
     try {
       setSigningIn(true)
       setErr('')
-      const prepared = await prepareWorldWorkerVerification(settings.backendUrl, worker.id)
+      const prepared = await prepareWorldWorkerVerification(settings.backendUrl)
       setWorldPrepare(prepared)
       setWorldOpen(true)
     } catch (error) {
@@ -74,14 +67,11 @@ export default function Login({ onLogin }: Props) {
   }
 
   const handleWorldVerify = async (result: IDKitResult) => {
-    const worker = workers.find((entry) => entry.id === selectedId)
-
-    if (!worker || !worldPrepare) {
+    if (!worldPrepare) {
       throw new Error('Worker verification context is missing')
     }
 
     const session = await verifyWorldWorker(settings.backendUrl, {
-      userId: worker.id,
       rp_id: worldPrepare.rp_context.rp_id,
       idkitResponse: result,
     })
@@ -112,32 +102,48 @@ export default function Login({ onLogin }: Props) {
 
       <div style={{ fontSize: '24px', fontWeight: 500, marginBottom: '4px' }}>EdgeBind</div>
       <div style={{ fontSize: '14px', color: '#444', marginBottom: '40px', textAlign: 'center' }}>
-        Verified worker console
+        {settings.mode === 'demo' ? 'Demo worker console' : 'Verify with World to start working'}
       </div>
 
       <div style={{ width: '100%', maxWidth: '360px' }}>
-        <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          Verified worker
-        </div>
-        <select
-          style={input}
-          value={selectedId}
-          onChange={(e) => { setSelectedId(e.target.value); setErr('') }}
-          disabled={loading || signingIn}
-        >
-          {workers.map((worker) => (
-            <option key={worker.id} value={worker.id}>
-              {worker.name}
-            </option>
-          ))}
-        </select>
+        {settings.mode === 'demo' ? (
+          <>
+            <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+              Verified worker
+            </div>
+            <select
+              style={input}
+              value={workers[0]?.id ?? ''}
+              onChange={() => setErr('')}
+              disabled={loading || signingIn}
+            >
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <div style={{ marginBottom: '18px', background: '#0f0f0f', border: '0.5px solid #1e1e1e', borderRadius: '12px', padding: '16px 18px' }}>
+            <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+              Worker identity
+            </div>
+            <div style={{ fontSize: '14px', color: '#f0f0f0', marginBottom: '6px' }}>
+              No preset worker profile
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.6 }}>
+              World proof creates or restores your verified worker identity automatically.
+            </div>
+          </div>
+        )}
         {err && (
           <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', textAlign: 'center' }}>
             {err}
           </div>
         )}
         <button style={gradientBtn} onClick={submit} disabled={loading || signingIn}>
-          {loading ? 'Loading workers...' : signingIn ? 'Preparing World...' : settings.mode === 'demo' ? 'Continue' : 'Verify with World'}
+          {loading ? 'Loading...' : signingIn ? 'Preparing World...' : settings.mode === 'demo' ? 'Continue' : 'Verify with World'}
         </button>
 
         <div style={{ marginTop: '24px', background: '#0f0f0f', border: '0.5px solid #1e1e1e', borderRadius: '10px', padding: '14px 16px' }}>
@@ -161,7 +167,7 @@ export default function Login({ onLogin }: Props) {
           action={worldPrepare.action}
           rp_context={worldPrepare.rp_context as RpContext}
           allow_legacy_proofs={true}
-          preset={orbLegacy({ signal: selectedId })}
+          preset={orbLegacy({ signal: worldPrepare.signal })}
           environment={worldPrepare.environment}
           handleVerify={handleWorldVerify}
           onSuccess={() => {

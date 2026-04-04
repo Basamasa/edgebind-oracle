@@ -56,7 +56,8 @@ async function runBootstrap(executor: Queryable) {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         role TEXT NOT NULL,
-        is_human_verified BOOLEAN NOT NULL DEFAULT FALSE
+        is_human_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        world_nullifier TEXT
       )
     `,
     `
@@ -124,6 +125,8 @@ async function runBootstrap(executor: Queryable) {
         updated_at TIMESTAMPTZ NOT NULL
       )
     `,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS world_nullifier TEXT`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_world_nullifier_idx ON users(world_nullifier) WHERE world_nullifier IS NOT NULL`,
     `CREATE INDEX IF NOT EXISTS tasks_owner_id_idx ON tasks(owner_id)`,
     `CREATE INDEX IF NOT EXISTS tasks_worker_id_idx ON tasks(worker_id)`,
     `CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks(status)`,

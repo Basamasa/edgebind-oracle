@@ -17,12 +17,11 @@ export interface WorldPrepareResponse {
   app_id: `app_${string}`
   action: string
   environment: 'production' | 'staging'
-  user: WorkerSummary
+  signal: string
   rp_context: RpContext
 }
 
 export interface WorldVerifyPayload {
-  userId: string
   rp_id: string
   idkitResponse: IDKitResult
 }

@@ -3,8 +3,9 @@ import { signRequest } from "@worldcoin/idkit/signing"
 
 import { corsPreflight, withCors } from "@/lib/server/cors"
 import { AppError, toErrorResponse } from "@/lib/server/errors"
-import { listUsers } from "@/lib/server/task-service"
 import { getWorldConfig } from "@/lib/world"
+
+const WORKER_WORLD_SIGNAL = "edgebind-worker-auth"
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request)
@@ -12,24 +13,10 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await request.json().catch(() => ({}))
-    const userId = String(payload.userId ?? "").trim()
-
-    if (!userId) {
-      throw new AppError(400, "userId is required")
-    }
-
     const config = getWorldConfig()
 
     if (!config.appId || !config.action || !config.rpId || !config.rpSigningKey) {
       throw new AppError(503, "World verification is not configured yet")
-    }
-
-    const users = await listUsers("worker")
-    const user = users.find((entry) => entry.id === userId)
-
-    if (!user) {
-      throw new AppError(404, `Worker ${userId} was not found`)
     }
 
     const signature = signRequest(config.action, config.rpSigningKey)
@@ -40,12 +27,7 @@ export async function POST(request: NextRequest) {
         app_id: config.appId,
         action: config.action,
         environment: config.environment,
-        user: {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          isHumanVerified: user.isHumanVerified,
-        },
+        signal: WORKER_WORLD_SIGNAL,
         rp_context: {
           rp_id: config.rpId,
           nonce: signature.nonce,

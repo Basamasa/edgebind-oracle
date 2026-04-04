@@ -9,14 +9,33 @@ export interface Settings {
 
 const KEY = 'edgebind_settings'
 
+function isHostedRuntime() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const host = window.location.hostname
+  return host !== 'localhost' && host !== '127.0.0.1'
+}
+
 export const DEFAULT_SETTINGS: Settings = {
-  mode: 'demo',
+  mode: 'live',
   backendUrl: 'https://edgebind-web.vercel.app',
 }
 
 export const loadSettings = (): Settings => {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
+    const merged = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } as Settings
+
+    if (isHostedRuntime()) {
+      return {
+        ...merged,
+        mode: 'live',
+        backendUrl: DEFAULT_SETTINGS.backendUrl,
+      }
+    }
+
+    return merged
   } catch {
     return DEFAULT_SETTINGS
   }
@@ -24,7 +43,14 @@ export const loadSettings = (): Settings => {
 
 export const saveSettings = (s: Partial<Settings>) => {
   const current = loadSettings()
-  localStorage.setItem(KEY, JSON.stringify({ ...current, ...s }))
+  const next = { ...current, ...s }
+
+  if (isHostedRuntime()) {
+    next.mode = 'live'
+    next.backendUrl = DEFAULT_SETTINGS.backendUrl
+  }
+
+  localStorage.setItem(KEY, JSON.stringify(next))
 }
 
 // ping the backend to check if it's reachable

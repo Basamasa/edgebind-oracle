@@ -51,7 +51,7 @@ export default function App() {
   const [appMode, setAppMode] = useState<AppMode>(loadSettings().mode)
   const [backendUrl, setBackendUrl] = useState(loadSettings().backendUrl)
   const isDemo = appMode === 'demo'
-  const user = session?.user.name ?? null
+  const workerId = session?.user.id ?? null
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -63,11 +63,11 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    setHistoryCount(loadHistory(user ?? '').length)
-  }, [view, user])
+    setHistoryCount(loadHistory(workerId ?? '').length)
+  }, [view, workerId])
 
   useEffect(() => {
-    if (!user) return
+    if (!workerId) return
 
     if (isDemo) {
       setRequests(MOCK_REQUESTS)
@@ -80,7 +80,7 @@ export default function App() {
         setRequests([])
         setErr(error instanceof Error ? error.message : 'Failed to load live tasks')
       })
-  }, [backendUrl, isDemo, user])
+  }, [backendUrl, isDemo, workerId])
 
   const startCam = useCallback(async () => {
     try {
@@ -168,7 +168,7 @@ export default function App() {
 
     setScreen('submitting')
 
-    const saveEntry = () => saveToHistory(user ?? '', {
+    const saveEntry = () => saveToHistory(workerId ?? '', {
       requestId: request.taskId,
       description: request.description,
       lat: coords.lat,
@@ -238,7 +238,7 @@ export default function App() {
         {showBack && (
           <button onClick={showBack} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← back</button>
         )}
-        {!showBack && <div style={{ fontSize: '13px', color: '#555' }}>Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span></div>}
+        {!showBack && <div style={{ fontSize: '13px', color: '#555' }}>worker_id = <span style={{ color: '#f0f0f0', fontFamily: 'monospace' }}>{workerId}</span></div>}
       </div>
       {modeBadge}
     </div>
@@ -253,14 +253,14 @@ export default function App() {
     return <Login onLogin={setSession} />
   }
 
-  if (view === 'history') return (<><History onBack={() => setView('list')} user={user ?? ''} onSignOut={signOut} />{tabBar}</>)
-  if (view === 'about') return (<><About user={user ?? ''} onSignOut={signOut} />{tabBar}</>)
-  if (view === 'profile') return (<><Profile user={user ?? ''} onSignOut={signOut} onModeChange={handleModeChange} />{tabBar}</>)
+  if (view === 'history') return (<><History onBack={() => setView('list')} user={workerId ?? ''} onSignOut={signOut} />{tabBar}</>)
+  if (view === 'about') return (<><About user={workerId ?? ''} onSignOut={signOut} />{tabBar}</>)
+  if (view === 'profile') return (<><Profile user={workerId ?? ''} onSignOut={signOut} onModeChange={handleModeChange} />{tabBar}</>)
 
   if (view === 'list') {
     return (
       <>
-        <RequestList requests={requests} onSelect={selectRequest} user={user ?? ''} onSignOut={signOut} onHistory={() => setView('history')} historyCount={historyCount} />
+        <RequestList requests={requests} onSelect={selectRequest} user={workerId ?? ''} onSignOut={signOut} onHistory={() => setView('history')} historyCount={historyCount} />
         {tabBar}
       </>
     )
