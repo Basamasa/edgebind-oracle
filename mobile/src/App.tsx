@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Login from './screens/Login'
+import RequestList from './screens/RequestList'
 import { MOCK_REQUESTS, GRADIENT } from './data/mock'
 import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
+type View = 'list' | 'capture'
 
 interface Coords {
   lat: number
@@ -15,10 +17,10 @@ interface Coords {
 const BACKEND = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000'
 
 export default function App() {
-  // auth state - null means not logged in
   const [user, setUser] = useState<string | null>(null)
-
+  const [view, setView] = useState<View>('list')
   const [screen, setScreen] = useState<Screen>('ready')
+  const [requests, setRequests] = useState<Request[]>([])
   const [request, setRequest] = useState<Request | null>(null)
   const [photo, setPhoto] = useState<string | null>(null)
   const [coords, setCoords] = useState<Coords | null>(null)
@@ -31,19 +33,18 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  // live clock
   useEffect(() => {
     const t = setInterval(() => setClock(new Date().toLocaleTimeString()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  // try backend, fallback to mock if it fails
+  // load requests - try backend, fallback to mock
   useEffect(() => {
     if (!user) return
-    fetch(`${BACKEND}/api/request/active`)
+    fetch(`${BACKEND}/api/requests`)
       .then(r => r.json())
-      .then(data => { setRequest(data); setUsingMock(false) })
-      .catch(() => { setRequest(MOCK_REQUESTS[0]); setUsingMock(true) })
+      .then(data => { setRequests(data); setUsingMock(false) })
+      .catch(() => { setRequests(MOCK_REQUESTS); setUsingMock(true) })
   }, [user])
 
   const startCam = useCallback(async () => {
@@ -72,12 +73,30 @@ export default function App() {
     )
   }, [])
 
+  // start cam + gps when entering capture view
   useEffect(() => {
-    if (!user) return
-    startCam()
-    getGps()
-    return () => stopCam()
-  }, [user, startCam, stopCam, getGps])
+    if (view === 'capture' && screen === 'ready') {
+      startCam()
+      getGps()
+    }
+    return () => { if (view !== 'capture') stopCam() }
+  }, [view, screen])
+
+  const selectRequest = (r: Request) => {
+    setRequest(r)
+    setScreen('ready')
+    setPhoto(null)
+    setErr('')
+    setView('capture')
+  }
+
+  const backToList = () => {
+    stopCam()
+    setView('list')
+    setScreen('ready')
+    setPhoto(null)
+    setErr('')
+  }
 
   const capture = () => {
     const v = videoRef.current
@@ -118,60 +137,62 @@ export default function App() {
     }
   }
 
-  // show login first
-  if (!user) return <Login onLogin={setUser} />
+  const signOut = () => { setUser(null); stopCam(); setView('list') }
 
-  // top bar shown on all main screens
   const topBar = (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
       <div style={{ fontSize: '13px', color: '#555' }}>
         Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
       </div>
-      <button
-        onClick={() => { setUser(null); stopCam() }}
-        style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}
-      >
+      <button onClick={signOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
         Sign out
       </button>
     </div>
   )
 
-  // --- screen: ready ---
+  // --- login ---
+  if (!user) return <Login onLogin={setUser} />
+
+  // --- request list ---
+  if (view === 'list') return (
+    <RequestList
+      requests={requests}
+      onSelect={selectRequest}
+      user={user}
+      onSignOut={signOut}
+    />
+  )
+
+  // --- capture: ready ---
   if (screen === 'ready') return (
     <div style={page}>
       {topBar}
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <div style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Active request
-          </div>
+          <button onClick={backToList} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            ← back
+          </button>
           {usingMock && (
             <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>
               demo mode
             </div>
           )}
         </div>
-        {request ? (
+        {request && (
           <>
-            <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>
-              {request.description ?? `Prove location within ${request.radius}m`}
-            </div>
+            <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>{request.description}</div>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>
               Deadline: {new Date(request.deadline).toLocaleString()}
             </div>
             {request.amount && (
-              <div style={{ fontSize: '12px', color: '#facc15', marginBottom: '6px' }}>
-                Locked: {request.amount}
-              </div>
+              <div style={{ fontSize: '12px', color: '#facc15', marginBottom: '6px' }}>Locked: {request.amount}</div>
             )}
           </>
-        ) : (
-          <div style={{ fontSize: '14px', color: '#555', marginBottom: '6px' }}>Loading request...</div>
         )}
         <div style={{ fontSize: '12px', color: coords ? '#E040B0' : '#facc15' }}>
           {coords ? `GPS ready — ${Math.round(coords.accuracy)}m accuracy` : 'Acquiring GPS...'}
         </div>
-        {err && request && <div style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>{err}</div>}
+        {err && <div style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>{err}</div>}
       </div>
 
       <div style={{ flex: 1, margin: '12px 16px', borderRadius: '12px', overflow: 'hidden', background: '#111', position: 'relative', minHeight: '300px' }}>
@@ -189,18 +210,18 @@ export default function App() {
           onClick={capture}
           disabled={!coords || !request}
         >
-          {!request ? 'Loading request...' : !coords ? 'Waiting for GPS...' : 'Capture proof'}
+          {!coords ? 'Waiting for GPS...' : 'Capture proof'}
         </button>
       </div>
     </div>
   )
 
-  // --- screen: preview ---
+  // --- capture: preview ---
   if (screen === 'preview') return (
     <div style={page}>
       {topBar}
       <div style={{ margin: '12px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
-        {photo && <img src={photo} alt="captured proof" style={{ width: '100%', display: 'block' }} />}
+        {photo && <img src={photo} alt="proof" style={{ width: '100%', display: 'block' }} />}
       </div>
       <div style={card}>
         {([
@@ -223,7 +244,7 @@ export default function App() {
     </div>
   )
 
-  // --- screen: submitting ---
+  // --- submitting ---
   if (screen === 'submitting') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', border: '2.5px solid #E040B0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -234,7 +255,7 @@ export default function App() {
     </div>
   )
 
-  // --- screen: success ---
+  // --- success ---
   if (screen === 'success') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
@@ -258,11 +279,11 @@ export default function App() {
           </div>
         ))}
       </div>
-      <button style={{ ...ghostBtn, marginTop: '20px' }} onClick={retake}>Back to requests</button>
+      <button style={{ ...ghostBtn, marginTop: '20px' }} onClick={backToList}>Back to requests</button>
     </div>
   )
 
-  // --- screen: error ---
+  // --- error ---
   if (screen === 'error') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ fontSize: '18px', fontWeight: 500, color: '#f87171', marginBottom: '10px' }}>Something went wrong</div>
