@@ -1,5 +1,8 @@
 # Architecture
 
+## Visual Diagram
+- Open `docs/architecture.html` in a browser for the repo-level graph view.
+
 ## Final Target Product Shape
 - `frontend`: single Next.js app for:
   - public landing page
