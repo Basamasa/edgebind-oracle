@@ -3,13 +3,15 @@ import Login from './screens/Login'
 import RequestList from './screens/RequestList'
 import History, { saveToHistory, loadHistory } from './screens/History'
 import CreateRequest from './screens/CreateRequest'
-import type { HistoryEntry } from './screens/History'
+import About from './screens/About'
+import Profile from './screens/Profile'
+import TabBar from './screens/TabBar'
 import { MOCK_REQUESTS, GRADIENT } from './data/mock'
 import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
-type View = 'list' | 'capture' | 'history' | 'create'
+type View = 'list' | 'capture' | 'history' | 'create' | 'about' | 'profile'
 
 interface Coords {
   lat: number
@@ -42,12 +44,10 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  // load history count for badge
   useEffect(() => {
-    setHistoryCount(loadHistory().length)
-  }, [view])
+    setHistoryCount(loadHistory(user ?? '').length)
+  }, [view, user])
 
-  // load requests on login
   useEffect(() => {
     if (!user) return
     fetch(`${BACKEND}/api/requests`)
@@ -113,8 +113,7 @@ export default function App() {
     setScreen('submitting')
     if (usingMock) {
       setTimeout(() => {
-        // save to history even in mock mode
-        saveToHistory({
+        saveToHistory(user ?? '', {
           requestId: request.requestId,
           description: request.description ?? 'Verify location',
           lat: coords.lat,
@@ -133,8 +132,7 @@ export default function App() {
         body: JSON.stringify({ requestId: request.requestId, photo, latitude: coords.lat, longitude: coords.lng, timestamp: ts }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
-      // save to history on real success too
-      saveToHistory({
+      saveToHistory(user ?? '', {
         requestId: request.requestId,
         description: request.description ?? 'Verify location',
         lat: coords.lat,
@@ -151,53 +149,86 @@ export default function App() {
 
   const signOut = () => { setUser(null); stopCam(); setView('list') }
 
-  const topBar = (showHistory = true) => (
+  // tab bar — hidden during capture
+  const showTabs = view !== 'capture'
+  const tabBar = showTabs ? (
+    <TabBar
+      active={view as any}
+      onChange={(tab) => { stopCam(); setView(tab) }}
+      historyCount={historyCount}
+    />
+  ) : null
+
+  const topBar = (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
       <div style={{ fontSize: '13px', color: '#555' }}>
         Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
       </div>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        {showHistory && (
-          <button
-            onClick={() => { stopCam(); setView('history') }}
-            style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
-          >
-            History
-            {historyCount > 0 && (
-              <span style={{ position: 'absolute', top: '-6px', right: '-10px', background: '#E040B0', color: '#fff', borderRadius: '10px', fontSize: '10px', padding: '1px 5px', fontWeight: 500 }}>
-                {historyCount}
-              </span>
-            )}
-          </button>
-        )}
-        <button onClick={signOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
-          Sign out
-        </button>
-      </div>
+      {usingMock && (
+        <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>
+          demo mode
+        </div>
+      )}
     </div>
   )
 
   if (!user) return <Login onLogin={setUser} />
 
-  if (view === 'create') return (
-    <CreateRequest onBack={() => setView('list')} onCreated={(r) => { setRequests(prev => [r, ...prev]); setView('list') }} user={user} onSignOut={signOut} />
+  if (view === 'history') return (
+    <>
+      <History onBack={() => setView('list')} user={user} onSignOut={signOut} />
+      {tabBar}
+    </>
   )
 
-  if (view === 'history') return (
-    <History onBack={() => setView('list')} user={user!} onSignOut={signOut} />
+  if (view === 'create') return (
+    <>
+      <CreateRequest
+        onBack={() => setView('list')}
+        onCreated={(r) => { setRequests(prev => [r, ...prev]); setView('list') }}
+        user={user}
+        onSignOut={signOut}
+      />
+      {tabBar}
+    </>
+  )
+
+  if (view === 'about') return (
+    <>
+      <About user={user} onSignOut={signOut} />
+      {tabBar}
+    </>
+  )
+
+  if (view === 'profile') return (
+    <>
+      <Profile user={user} onSignOut={signOut} />
+      {tabBar}
+    </>
   )
 
   if (view === 'list') return (
-    <RequestList requests={requests} onSelect={selectRequest} user={user!} onSignOut={signOut} onHistory={() => { stopCam(); setView('history') }} historyCount={historyCount} onCreate={() => setView('create')} />
+    <>
+      <RequestList
+        requests={requests}
+        onSelect={selectRequest}
+        user={user}
+        onSignOut={signOut}
+        onHistory={() => setView('history')}
+        historyCount={historyCount}
+        onCreate={() => setView('create')}
+      />
+      {tabBar}
+    </>
   )
 
+  // capture flow — no tab bar
   if (screen === 'ready') return (
     <div style={page}>
-      {topBar()}
+      {topBar}
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
           <button onClick={backToList} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← back</button>
-          {usingMock && <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>demo mode</div>}
         </div>
         {request && (
           <>
@@ -226,7 +257,7 @@ export default function App() {
 
   if (screen === 'preview') return (
     <div style={page}>
-      {topBar(false)}
+      {topBar}
       <div style={{ margin: '12px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
         {photo && <img src={photo} alt="proof" style={{ width: '100%', display: 'block' }} />}
       </div>
@@ -281,7 +312,7 @@ export default function App() {
         ))}
       </div>
       <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '20px' }}>
-        <button style={{ ...ghostBtn, flex: 1 }} onClick={() => { setView('history') }}>View history</button>
+        <button style={{ ...ghostBtn, flex: 1 }} onClick={() => setView('history')}>View history</button>
         <button style={{ ...ghostBtn, flex: 1 }} onClick={backToList}>Back to list</button>
       </div>
     </div>
@@ -297,5 +328,3 @@ export default function App() {
 
   return null
 }
-// CreateRequest is imported at the top — add this line manually at the top of App.tsx:
-// import CreateRequest from './screens/CreateRequest'
