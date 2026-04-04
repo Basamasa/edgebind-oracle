@@ -57,7 +57,8 @@ async function runBootstrap(executor: Queryable) {
         name TEXT NOT NULL,
         role TEXT NOT NULL,
         is_human_verified BOOLEAN NOT NULL DEFAULT FALSE,
-        world_nullifier TEXT
+        world_nullifier TEXT,
+        payout_account_id TEXT
       )
     `,
     `
@@ -118,6 +119,8 @@ async function runBootstrap(executor: Queryable) {
         status TEXT NOT NULL,
         amount DOUBLE PRECISION NOT NULL,
         currency TEXT NOT NULL,
+        rail TEXT NOT NULL DEFAULT 'internal',
+        reference TEXT,
         released_at TIMESTAMPTZ,
         approved_by TEXT REFERENCES users(id),
         approval_note TEXT,
@@ -126,7 +129,10 @@ async function runBootstrap(executor: Queryable) {
       )
     `,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS world_nullifier TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_account_id TEXT`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_world_nullifier_idx ON users(world_nullifier) WHERE world_nullifier IS NOT NULL`,
+    `ALTER TABLE payouts ADD COLUMN IF NOT EXISTS rail TEXT NOT NULL DEFAULT 'internal'`,
+    `ALTER TABLE payouts ADD COLUMN IF NOT EXISTS reference TEXT`,
     `CREATE INDEX IF NOT EXISTS tasks_owner_id_idx ON tasks(owner_id)`,
     `CREATE INDEX IF NOT EXISTS tasks_worker_id_idx ON tasks(worker_id)`,
     `CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks(status)`,

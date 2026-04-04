@@ -30,7 +30,7 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
       {/* top bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
         <div style={{ fontSize: '13px', color: '#555' }}>
-          Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
+          worker_id = <span style={{ color: '#f0f0f0', fontFamily: 'monospace' }}>{user}</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
@@ -83,8 +83,17 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#888' }}>
-                    {r.radius}m radius
+                  {r.radius !== null ? (
+                    <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#888' }}>
+                      {r.radius}m radius
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', background: '#10251c', border: '0.5px solid rgba(29,158,117,0.35)', borderRadius: '4px', padding: '2px 7px', color: '#1D9E75' }}>
+                      no location gate
+                    </span>
+                  )}
+                  <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#888', fontFamily: 'monospace' }}>
+                    {r.proofType}
                   </span>
                   <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#facc15' }}>
                     {r.amount}

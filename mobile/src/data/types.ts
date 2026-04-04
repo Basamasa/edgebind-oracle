@@ -5,6 +5,7 @@ export interface WorkerSummary {
   name: string
   role: 'worker'
   isHumanVerified: boolean
+  payoutAccountId?: string | null
 }
 
 export interface WorkerSession {

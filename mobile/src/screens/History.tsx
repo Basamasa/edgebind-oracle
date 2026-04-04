@@ -58,7 +58,7 @@ export default function History({ onBack, user, onSignOut }: Props) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
         <div style={{ fontSize: '13px', color: '#555' }}>
-          Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
+          worker_id = <span style={{ color: '#f0f0f0', fontFamily: 'monospace' }}>{user}</span>
         </div>
         <button onClick={onSignOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
           Sign out
@@ -66,12 +66,12 @@ export default function History({ onBack, user, onSignOut }: Props) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '20px 16px 8px' }}>
-        <div>
-          <button onClick={onBack} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '6px', display: 'block' }}>
+          <div>
+            <button onClick={onBack} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '6px', display: 'block' }}>
             ← back
           </button>
-          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-            {user}'s history
+          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontFamily: 'monospace' }}>
+            history for {user}
           </div>
           <div style={{ fontSize: '22px', fontWeight: 500 }}>
             {entries.length} {entries.length === 1 ? 'proof' : 'proofs'}

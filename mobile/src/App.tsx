@@ -10,7 +10,11 @@ import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
 import { loadSettings } from './data/settings'
 import type { AppMode } from './data/settings'
-import { acceptTask as acceptLiveTask, fetchOpenTasks, submitTaskProof } from './data/api'
+import {
+  acceptTask as acceptLiveTask,
+  fetchOpenTasks,
+  submitTaskProof,
+} from './data/api'
 import type { TaskRecord, WorkerSession } from './data/types'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
@@ -19,19 +23,17 @@ type View = 'list' | 'capture' | 'history' | 'about' | 'profile'
 interface Coords { lat: number; lng: number; accuracy: number }
 
 function mapTask(task: TaskRecord): Request | null {
-  if (!task.locationRequirement) {
-    return null
-  }
-
   return {
     taskId: task.id,
-    lat: task.locationRequirement.latitude,
-    lng: task.locationRequirement.longitude,
-    radius: task.locationRequirement.radiusMeters,
+    lat: task.locationRequirement?.latitude ?? null,
+    lng: task.locationRequirement?.longitude ?? null,
+    radius: task.locationRequirement?.radiusMeters ?? null,
     deadline: task.deadline,
     amount: `${task.rewardAmount} ${task.rewardCurrency}`,
     description: task.title,
     requestCode: task.requestCode,
+    proofType: task.proofType,
+    locationLabel: task.locationRequirement?.label ?? null,
   }
 }
 
@@ -52,6 +54,8 @@ export default function App() {
   const [backendUrl, setBackendUrl] = useState(loadSettings().backendUrl)
   const isDemo = appMode === 'demo'
   const workerId = session?.user.id ?? null
+  const requiresPhoto = request?.proofType === 'photo' || request?.proofType === 'photo_location'
+  const requiresLocation = request?.proofType === 'location' || request?.proofType === 'photo_location'
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -161,8 +165,18 @@ export default function App() {
   }
 
   const submit = async () => {
-    if (!photo || !coords || !request) {
-      setErr('Missing photo, GPS or task')
+    if (!request) {
+      setErr('Missing task')
+      return
+    }
+
+    if (requiresPhoto && !photo) {
+      setErr('Missing photo proof')
+      return
+    }
+
+    if (requiresLocation && !coords) {
+      setErr('Missing GPS proof')
       return
     }
 
@@ -171,10 +185,10 @@ export default function App() {
     const saveEntry = () => saveToHistory(workerId ?? '', {
       requestId: request.taskId,
       description: request.description,
-      lat: coords.lat,
-      lng: coords.lng,
+      lat: coords?.lat ?? 0,
+      lng: coords?.lng ?? 0,
       ts,
-      photo,
+      photo: photo ?? '',
     })
 
     if (isDemo) {
@@ -194,10 +208,10 @@ export default function App() {
     try {
       await submitTaskProof(backendUrl, session.token, request.taskId, {
         requestCode: request.requestCode,
-        imageDataUrl: photo,
-        latitude: coords.lat,
-        longitude: coords.lng,
-        accuracyMeters: coords.accuracy,
+        imageDataUrl: photo ?? undefined,
+        latitude: coords?.lat,
+        longitude: coords?.lng,
+        accuracyMeters: coords?.accuracy,
       })
 
       saveEntry()
@@ -219,6 +233,10 @@ export default function App() {
     setAppMode(mode)
     setBackendUrl(url)
   }
+
+  const handleProfileUpdate = useCallback((user: WorkerSession['user']) => {
+    setSession((current) => (current ? { ...current, user } : current))
+  }, [])
 
   const modeBadge = (
     <div style={{
@@ -255,7 +273,20 @@ export default function App() {
 
   if (view === 'history') return (<><History onBack={() => setView('list')} user={workerId ?? ''} onSignOut={signOut} />{tabBar}</>)
   if (view === 'about') return (<><About user={workerId ?? ''} onSignOut={signOut} />{tabBar}</>)
-  if (view === 'profile') return (<><Profile user={workerId ?? ''} onSignOut={signOut} onModeChange={handleModeChange} />{tabBar}</>)
+  if (view === 'profile' && session) {
+    return (
+      <>
+        <Profile
+          user={session.user}
+          token={session.token}
+          onSignOut={signOut}
+          onModeChange={handleModeChange}
+          onProfileUpdate={handleProfileUpdate}
+        />
+        {tabBar}
+      </>
+    )
+  }
 
   if (view === 'list') {
     return (
@@ -276,11 +307,19 @@ export default function App() {
               <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>{request.description}</div>
               <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Deadline: {new Date(request.deadline).toLocaleString()}</div>
               <div style={{ fontSize: '12px', color: '#facc15', marginBottom: '6px' }}>Locked: {request.amount}</div>
+              <div style={{ fontSize: '11px', color: '#666', marginBottom: '6px', fontFamily: 'monospace' }}>proof_type = {request.proofType}</div>
+              {request.locationLabel ? (
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '6px' }}>{request.locationLabel}</div>
+              ) : null}
               <div style={{ fontSize: '11px', color: '#444', marginBottom: '6px', fontFamily: 'monospace' }}>request_code = {request.requestCode}</div>
             </>
           )}
-          <div style={{ fontSize: '12px', color: coords ? '#E040B0' : '#facc15' }}>
-            {coords ? `GPS ready — ${Math.round(coords.accuracy)}m accuracy` : 'Acquiring GPS...'}
+          <div style={{ fontSize: '12px', color: !requiresLocation ? '#1D9E75' : coords ? '#E040B0' : '#facc15' }}>
+            {!requiresLocation
+              ? 'Location proof not required.'
+              : coords
+                ? `GPS ready — ${Math.round(coords.accuracy)}m accuracy`
+                : 'Acquiring GPS...'}
           </div>
           {err && <div style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>{err}</div>}
         </div>
@@ -290,8 +329,12 @@ export default function App() {
         </div>
         <canvas ref={canvasRef} style={{ display: 'none' }} />
         <div style={{ padding: '12px 16px 40px' }}>
-          <button style={coords && request ? gradientBtn : { ...ghostBtn, color: '#555' }} onClick={capture} disabled={!coords || !request}>
-            {!coords ? 'Waiting for GPS...' : 'Capture proof'}
+          <button
+            style={(!requiresLocation || coords) && request ? gradientBtn : { ...ghostBtn, color: '#555' }}
+            onClick={capture}
+            disabled={Boolean((requiresLocation && !coords) || !request)}
+          >
+            {requiresLocation && !coords ? 'Waiting for GPS...' : 'Capture proof'}
           </button>
         </div>
       </div>
@@ -312,6 +355,7 @@ export default function App() {
             { label: 'Longitude', value: coords?.lng.toFixed(6) ?? '—' },
             { label: 'Accuracy', value: coords ? `${Math.round(coords.accuracy)}m` : '—' },
             { label: 'Task ID', value: request?.taskId ?? '—', mono: true },
+            { label: 'Proof Type', value: request?.proofType ?? '—', mono: true },
             { label: 'Request Code', value: request?.requestCode ?? '—', mono: true },
           ] as Array<{ label: string; value: string; mono?: boolean }>).map(({ label, value, mono }) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '7px 0', borderBottom: '0.5px solid #1e1e1e' }}>

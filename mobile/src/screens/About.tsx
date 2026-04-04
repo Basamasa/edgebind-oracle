@@ -20,7 +20,7 @@ export default function About({ user, onSignOut }: Props) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
         <div style={{ fontSize: '13px', color: '#555' }}>
-          Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
+          worker_id = <span style={{ color: '#f0f0f0', fontFamily: 'monospace' }}>{user}</span>
         </div>
         <button onClick={onSignOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
           Sign out

@@ -78,6 +78,42 @@ export async function verifyWorldWorker(baseUrl: string, body: WorldVerifyPayloa
   return payload
 }
 
+export async function fetchWorkerProfile(baseUrl: string, token: string) {
+  const response = await fetch(`${baseUrl}/api/auth/mobile/worker/profile`, {
+    headers: authHeaders(token),
+  })
+  const payload = (await response.json()) as WorkerSummary | { error?: string }
+
+  if (!response.ok || !('id' in payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to load worker profile')
+  }
+
+  return payload
+}
+
+export async function updateWorkerPayoutAccount(
+  baseUrl: string,
+  token: string,
+  payoutAccountId: string,
+) {
+  const response = await fetch(`${baseUrl}/api/auth/mobile/worker/profile`, {
+    method: 'POST',
+    headers: (() => {
+      const headers = authHeaders(token)
+      headers.set('Content-Type', 'application/json')
+      return headers
+    })(),
+    body: JSON.stringify({ payoutAccountId }),
+  })
+  const payload = (await response.json()) as WorkerSummary | { error?: string }
+
+  if (!response.ok || !('id' in payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to update worker payout account')
+  }
+
+  return payload
+}
+
 export async function fetchOpenTasks(baseUrl: string) {
   const response = await fetch(`${baseUrl}/api/tasks?status=open`)
   const payload = (await response.json()) as TaskRecord[] | { error?: string }
@@ -114,9 +150,9 @@ export async function submitTaskProof(
   taskId: string,
   body: {
     requestCode: string
-    imageDataUrl: string
-    latitude: number
-    longitude: number
+    imageDataUrl?: string
+    latitude?: number
+    longitude?: number
     accuracyMeters?: number
   },
 ) {
@@ -130,11 +166,14 @@ export async function submitTaskProof(
     body: JSON.stringify({
       requestCode: body.requestCode,
       imageDataUrl: body.imageDataUrl,
-      location: {
-        latitude: body.latitude,
-        longitude: body.longitude,
-        accuracyMeters: body.accuracyMeters,
-      },
+      location:
+        typeof body.latitude === 'number' && typeof body.longitude === 'number'
+          ? {
+              latitude: body.latitude,
+              longitude: body.longitude,
+              accuracyMeters: body.accuracyMeters,
+            }
+          : undefined,
     }),
   })
   const payload = await response.json().catch(() => ({}))

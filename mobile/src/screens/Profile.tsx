@@ -4,15 +4,19 @@ import { GRADIENT } from '../data/mock'
 import { loadHistory } from './History'
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, pingBackend } from '../data/settings'
 import type { AppMode } from '../data/settings'
+import type { WorkerSummary } from '../data/types'
+import { fetchWorkerProfile, updateWorkerPayoutAccount } from '../data/api'
 
 interface Props {
-  user: string
+  user: WorkerSummary
+  token: string
   onSignOut: () => void
   onModeChange: (mode: AppMode, url: string) => void
+  onProfileUpdate: (user: WorkerSummary) => void
 }
 
-export default function Profile({ user, onSignOut, onModeChange }: Props) {
-  const history = loadHistory(user)
+export default function Profile({ user, token, onSignOut, onModeChange, onProfileUpdate }: Props) {
+  const history = loadHistory(user.id)
   const initials = 'WH'
 
   const settings = loadSettings()
@@ -20,10 +24,28 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
   const [backendUrl, setBackendUrl] = useState(settings.backendUrl)
   const [pinging, setPinging] = useState(false)
   const [pingResult, setPingResult] = useState<'ok' | 'fail' | null>(null)
+  const [payoutAccountId, setPayoutAccountId] = useState(user.payoutAccountId ?? '')
+  const [savingPayout, setSavingPayout] = useState(false)
+  const [payoutNotice, setPayoutNotice] = useState('')
+  const [payoutError, setPayoutError] = useState('')
   const hostedRuntime =
     typeof window !== 'undefined' &&
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1'
+
+  useEffect(() => {
+    if (mode === 'demo') {
+      setPayoutAccountId(user.payoutAccountId ?? '')
+      return
+    }
+
+    fetchWorkerProfile(settings.backendUrl, token)
+      .then((profile) => {
+        setPayoutAccountId(profile.payoutAccountId ?? '')
+        onProfileUpdate(profile)
+      })
+      .catch(() => {})
+  }, [mode, onProfileUpdate, settings.backendUrl, token, user.payoutAccountId])
 
   const testConnection = async () => {
     setPinging(true)
@@ -39,6 +61,28 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
 
     saveSettings({ mode: nextMode, backendUrl: nextBackendUrl })
     onModeChange(nextMode, nextBackendUrl)
+  }
+
+  const savePayout = async () => {
+    if (mode === 'demo') {
+      setPayoutNotice('Demo mode does not use live Hedera payouts.')
+      setPayoutError('')
+      return
+    }
+
+    try {
+      setSavingPayout(true)
+      setPayoutError('')
+      setPayoutNotice('')
+      const updated = await updateWorkerPayoutAccount(settings.backendUrl, token, payoutAccountId)
+      onProfileUpdate(updated)
+      setPayoutAccountId(updated.payoutAccountId ?? '')
+      setPayoutNotice('Hedera payout account saved.')
+    } catch (error) {
+      setPayoutError(error instanceof Error ? error.message : 'Failed to save payout account')
+    } finally {
+      setSavingPayout(false)
+    }
   }
 
   const input: React.CSSProperties = {
@@ -63,11 +107,11 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
 
       {/* avatar */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 20px' }}>
-      <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', marginBottom: '12px' }}>
+        <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 500, color: '#fff', marginBottom: '12px' }}>
           {initials}
         </div>
         <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '4px' }}>Verified human worker</div>
-        <div style={{ fontSize: '13px', color: '#777', fontFamily: 'monospace' }}>{user}</div>
+        <div style={{ fontSize: '13px', color: '#777', fontFamily: 'monospace' }}>{user.id}</div>
       </div>
 
       {/* stats */}
@@ -173,7 +217,7 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
       <div style={card}>
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Account</div>
         {[
-          { label: 'worker_id', value: user, mono: true },
+          { label: 'worker_id', value: user.id, mono: true },
           { label: 'human_verified', value: 'true', mono: true },
           { label: 'identity_source', value: mode === 'demo' ? 'demo_seed' : 'world_id', mono: true },
           { label: 'runtime', value: mode === 'demo' ? 'demo' : 'live', mono: true },
@@ -183,6 +227,42 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
             <span style={{ fontSize: '13px', color: '#f0f0f0', fontFamily: 'monospace' }}>{value}</span>
           </div>
         ))}
+      </div>
+
+      <div style={card}>
+        <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          Hedera payout
+        </div>
+        <div style={{ fontSize: '12px', color: '#444', lineHeight: 1.6, marginBottom: '12px' }}>
+          Set the Hedera account that should receive released payouts. Format: <span style={{ fontFamily: 'monospace' }}>0.0.12345</span>
+        </div>
+        <input
+          style={input}
+          type="text"
+          value={payoutAccountId}
+          onChange={(event) => {
+            setPayoutAccountId(event.target.value)
+            setPayoutError('')
+            setPayoutNotice('')
+          }}
+          placeholder="0.0.12345"
+          readOnly={mode === 'demo'}
+        />
+        {payoutNotice ? (
+          <div style={{ fontSize: '12px', color: '#1D9E75', marginTop: '10px' }}>{payoutNotice}</div>
+        ) : null}
+        {payoutError ? (
+          <div style={{ fontSize: '12px', color: '#f87171', marginTop: '10px' }}>{payoutError}</div>
+        ) : null}
+        <div style={{ marginTop: '12px' }}>
+          <button
+            style={gradientBtn}
+            onClick={savePayout}
+            disabled={savingPayout}
+          >
+            {savingPayout ? 'Saving Hedera account...' : 'Save Hedera account'}
+          </button>
+        </div>
       </div>
 
       {/* sign out */}

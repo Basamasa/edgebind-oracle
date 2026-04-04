@@ -10,6 +10,8 @@ const endpoints = [
   { method: "GET", path: "/api/auth/session", note: "inspect current identity and cookie session" },
   { method: "POST", path: "/api/tasks", note: "create task as verified owner session" },
   { method: "GET", path: "/api/tasks/:taskId", note: "read task state" },
+  { method: "GET", path: "/api/auth/mobile/worker/profile", note: "read current verified worker profile" },
+  { method: "POST", path: "/api/auth/mobile/worker/profile", note: "set the worker Hedera payout account" },
   { method: "POST", path: "/api/tasks/:taskId/accept", note: "accept as verified worker session" },
   { method: "POST", path: "/api/tasks/:taskId/submissions", note: "submit proof as verified worker session" },
   { method: "POST", path: "/api/tasks/:taskId/approve", note: "approve high-risk payout as owner/admin" },
@@ -22,9 +24,10 @@ const protocol = [
   "confirm identity.humanVerified = true",
   "call POST /api/tasks",
   "verified human accepts",
+  "worker sets Hedera payout account",
   "verified human submits proof",
   "runtime validates proof",
-  "low-risk pays automatically",
+  "HBAR payouts release on Hedera",
   "high-risk waits for approval",
 ]
 
@@ -54,7 +57,7 @@ const createTaskExample = `curl -X POST http://localhost:3000/api/tasks \\
     "title": "Photograph station entrance",
     "description": "instructions = Go to the north entrance. Take one current photo.\\n\\ndone_when = Photo is recent, readable, and at the correct entrance.\\n\\nproof_requirements = 1 photo, GPS within 120m, request code visible.\\n\\nauto_release_if = validation_passes && amount < 25\\n\\nescalate_if = validation_uncertain || amount >= 25",
     "rewardAmount": 8,
-    "rewardCurrency": "USD",
+    "rewardCurrency": "HBAR",
     "deadline": "2026-04-04T18:00:00.000Z",
     "proofType": "photo_location",
     "requestCode": "TASK-4821",
@@ -72,7 +75,7 @@ const createTaskResponse = `{
   "requestCode": "TASK-4821",
   "proofType": "photo_location",
   "rewardAmount": 8,
-  "rewardCurrency": "USD"
+  "rewardCurrency": "HBAR"
 }`
 
 const worldTargetExample = `npx @worldcoin/agentkit-cli register <agent-wallet-address>
@@ -129,12 +132,14 @@ agentbook_address = ${world.agentBookAddress ?? "unset"}`
                 >
                   Open manual console
                 </Link>
-                <Link
-                  href="/worker"
+                <a
+                  href="https://edgebind-worker.vercel.app"
+                  target="_blank"
+                  rel="noreferrer"
                   className="rounded-full border border-black/10 bg-white px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
                 >
-                  Open temporary worker flow
-                </Link>
+                  Open worker app
+                </a>
               </div>
             </div>
 

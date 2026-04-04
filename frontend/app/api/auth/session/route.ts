@@ -14,8 +14,7 @@ export async function GET() {
       session,
       identity: session
         ? {
-            source:
-              session.role !== "worker" && session.isHumanVerified ? "world_id" : "dev_session",
+            source: session.isHumanVerified ? "world_id" : "dev_session",
             actorModel:
               session.role === "worker"
                 ? "verified human executor"

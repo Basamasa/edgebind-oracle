@@ -22,6 +22,7 @@ export type UserSummary = {
   name: string
   role: UserRole
   isHumanVerified: boolean
+  payoutAccountId?: string | null
 }
 
 export type LocationRequirement = {
@@ -86,6 +87,8 @@ export type PayoutRecord = {
   status: PayoutStatus
   amount: number
   currency: string
+  rail: "internal" | "hedera"
+  reference: string | null
   releasedAt: string | null
   approvedBy: string | null
   approvalNote: string | null
@@ -135,12 +138,14 @@ export type TaskView = {
   payout:
     | {
         status: PayoutStatus
-        amount: number
-        currency: string
-        releasedAt: string | null
-        approvedBy: string | null
-        approvalNote: string | null
-      }
+      amount: number
+      currency: string
+      rail: PayoutRecord["rail"]
+      reference: string | null
+      releasedAt: string | null
+      approvedBy: string | null
+      approvalNote: string | null
+    }
     | null
 }
 

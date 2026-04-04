@@ -14,6 +14,12 @@ import type {
 import { dbQuery, withTransaction } from "@/lib/server/db"
 import { AppError } from "@/lib/server/errors"
 import {
+  getHederaConfig,
+  isHederaPayoutCurrency,
+  transferHbarPayout,
+  validateHederaAccountId,
+} from "@/lib/server/hedera"
+import {
   acceptTaskSchema,
   approveTaskSchema,
   createTaskSchema,
@@ -34,6 +40,7 @@ type UserRow = {
   role: UserSummary["role"]
   is_human_verified: boolean
   world_nullifier: string | null
+  payout_account_id: string | null
 }
 
 type TaskRow = {
@@ -90,6 +97,8 @@ type PayoutRow = {
   status: PayoutRecord["status"]
   amount: number
   currency: string
+  rail: PayoutRecord["rail"]
+  reference: string | null
   released_at: string | Date | null
   approved_by: string | null
   approval_note: string | null
@@ -123,6 +132,7 @@ function mapUser(row: UserRow): UserSummary {
     name: row.name,
     role: row.role,
     isHumanVerified: row.is_human_verified,
+    payoutAccountId: row.payout_account_id,
   }
 }
 
@@ -199,6 +209,8 @@ function mapPayout(row: PayoutRow): PayoutRecord {
     status: row.status,
     amount: row.amount,
     currency: row.currency,
+    rail: row.rail,
+    reference: row.reference,
     releasedAt: toIso(row.released_at),
     approvedBy: row.approved_by,
     approvalNote: row.approval_note,
@@ -281,17 +293,21 @@ async function upsertPayout(values: PayoutRecord, executor: PoolClient) {
         status,
         amount,
         currency,
+        rail,
+        reference,
         released_at,
         approved_by,
         approval_note,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (task_id) DO UPDATE
       SET status = EXCLUDED.status,
           amount = EXCLUDED.amount,
           currency = EXCLUDED.currency,
+          rail = EXCLUDED.rail,
+          reference = EXCLUDED.reference,
           released_at = EXCLUDED.released_at,
           approved_by = EXCLUDED.approved_by,
           approval_note = EXCLUDED.approval_note,
@@ -303,6 +319,8 @@ async function upsertPayout(values: PayoutRecord, executor: PoolClient) {
       values.status,
       values.amount,
       values.currency,
+      values.rail,
+      values.reference,
       values.releasedAt,
       values.approvedBy,
       values.approvalNote,
@@ -370,6 +388,36 @@ async function releasePayment(
 ) {
   const timestamp = nowIso()
   const existing = await payoutForTask(task.id, executor)
+  let rail: PayoutRecord["rail"] = "internal"
+  let reference: string | null = null
+  let resolvedApprovalNote = approvalNote ?? "Auto-approved below threshold."
+
+  if (isHederaPayoutCurrency(task.rewardCurrency)) {
+    const hedera = getHederaConfig()
+    const worker = task.workerId ? await findUser(task.workerId, executor) : null
+    const payoutAccountId = worker?.payoutAccountId?.trim()
+
+    if (hedera.configured && payoutAccountId) {
+      const transfer = await transferHbarPayout({
+        taskId: task.id,
+        amount: task.rewardAmount,
+        toAccountId: payoutAccountId,
+        network: hedera.network,
+      })
+
+      rail = "hedera"
+      reference = transfer.transactionId
+      resolvedApprovalNote =
+        approvalNote ??
+        `Released on Hedera ${hedera.network} to ${payoutAccountId}.`
+    } else {
+      resolvedApprovalNote =
+        approvalNote ??
+        `HBAR payout recorded without live Hedera transfer${
+          !hedera.configured ? " because the rail is not configured" : " because the worker has no payout account"
+        }.`
+    }
+  }
 
   await upsertPayout(
     {
@@ -378,9 +426,11 @@ async function releasePayment(
       status: "released",
       amount: task.rewardAmount,
       currency: task.rewardCurrency,
+      rail,
+      reference,
       releasedAt: timestamp,
       approvedBy: approvedBy ?? null,
-      approvalNote: approvalNote ?? "Auto-approved below threshold.",
+      approvalNote: resolvedApprovalNote,
       createdAt: existing?.createdAt ?? timestamp,
       updatedAt: timestamp,
     },
@@ -399,6 +449,8 @@ async function markPendingApproval(task: TaskRecord, executor: PoolClient) {
       status: "pending_approval",
       amount: task.rewardAmount,
       currency: task.rewardCurrency,
+      rail: existing?.rail ?? "internal",
+      reference: existing?.reference ?? null,
       releasedAt: null,
       approvedBy: null,
       approvalNote: "Awaiting manual approval above threshold.",
@@ -420,6 +472,8 @@ async function cancelPayment(task: TaskRecord, note: string, executor: PoolClien
       status: "cancelled",
       amount: task.rewardAmount,
       currency: task.rewardCurrency,
+      rail: existing?.rail ?? "internal",
+      reference: existing?.reference ?? null,
       releasedAt: null,
       approvedBy: null,
       approvalNote: note,
@@ -481,6 +535,8 @@ async function toTaskView(task: TaskRecord): Promise<TaskView> {
           status: payout.status,
           amount: payout.amount,
           currency: payout.currency,
+          rail: payout.rail,
+          reference: payout.reference,
           releasedAt: payout.releasedAt,
           approvedBy: payout.approvedBy,
           approvalNote: payout.approvalNote,
@@ -588,6 +644,37 @@ export async function markUserHumanVerified(userId: string) {
     )
 
     return verified
+  })
+}
+
+export async function getUserProfile(userId: string) {
+  return findUser(userId)
+}
+
+export async function updateWorkerPayoutAccount(userId: string, payoutAccountId: string) {
+  const normalizedAccountId = validateHederaAccountId(payoutAccountId)
+
+  return withTransaction(async (client) => {
+    const user = await findUser(userId, client)
+
+    if (user.role !== "worker") {
+      throw new AppError(400, "Only workers can set a payout account")
+    }
+
+    await dbQuery(
+      `
+        UPDATE users
+        SET payout_account_id = $2
+        WHERE id = $1
+      `,
+      [userId, normalizedAccountId],
+      client,
+    )
+
+    return {
+      ...user,
+      payoutAccountId: normalizedAccountId,
+    }
   })
 }
 

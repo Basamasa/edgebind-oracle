@@ -2,13 +2,15 @@
 
 export interface Request {
   taskId: string
-  lat: number
-  lng: number
-  radius: number
+  lat: number | null
+  lng: number | null
+  radius: number | null
   deadline: string
   amount: string
   description: string
   requestCode: string
+  proofType: 'photo' | 'location' | 'photo_location'
+  locationLabel?: string | null
 }
 
 export interface HistoryEntry {
@@ -30,6 +32,8 @@ export const MOCK_REQUESTS: Request[] = [
     amount: '0.1 ETH',
     description: 'Take a picture of the Palais des Festivals in Cannes',
     requestCode: 'MOCK-001',
+    proofType: 'photo_location',
+    locationLabel: 'Palais des Festivals',
   },
   {
     taskId: 'task_mock002',
@@ -40,6 +44,8 @@ export const MOCK_REQUESTS: Request[] = [
     amount: '0.05 ETH',
     description: 'Deliver a parcel in front of the main entrance',
     requestCode: 'MOCK-002',
+    proofType: 'photo_location',
+    locationLabel: 'Main entrance',
   },
   {
     taskId: 'task_mock003',
@@ -50,6 +56,8 @@ export const MOCK_REQUESTS: Request[] = [
     amount: '0.2 ETH',
     description: 'Confirm the ETH Cannes banner is still up on the beach',
     requestCode: 'MOCK-003',
+    proofType: 'photo_location',
+    locationLabel: 'Beach banner zone',
   },
 ]
 

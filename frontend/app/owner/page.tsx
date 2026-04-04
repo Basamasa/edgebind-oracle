@@ -7,6 +7,7 @@ import { formatDate, formatMoney, toQueryString } from "@/lib/format"
 import { getSessionUser } from "@/lib/server/session"
 import { listOwnerTasks, listUsers } from "@/lib/server/task-service"
 import { getWorldConfig } from "@/lib/world"
+import { getHederaConfig } from "@/lib/server/hedera"
 import { WorldOwnerVerify } from "@/components/world-owner-verify"
 
 import { approveTaskAction, createTaskAction } from "../app/actions"
@@ -59,6 +60,7 @@ export default async function OwnerPage({
   const error = getValue(params.error)
   const sessionUser = await getSessionUser()
   const world = getWorldConfig()
+  const hedera = getHederaConfig()
 
   if (!sessionUser || (sessionUser.role !== "owner" && sessionUser.role !== "admin")) {
     const owners = await listUsers("owner")
@@ -305,7 +307,7 @@ export default async function OwnerPage({
                 <Field label="currency" hint="Currency code">
                   <input
                     name="currency"
-                    defaultValue="USD"
+                    defaultValue={hedera.configured ? "HBAR" : "USD"}
                     required
                     className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 font-mono text-sm outline-none transition focus:border-black/30"
                   />
@@ -461,6 +463,8 @@ escalate_if = ${contract.escalateIf}`}
                 lines={[
                   `status = ${selectedTask.payout?.status ?? "not_started"}`,
                   `amount = ${selectedTask.rewardAmount} ${selectedTask.rewardCurrency}`,
+                  `rail = ${selectedTask.payout?.rail ?? "pending"}`,
+                  `reference = ${selectedTask.payout?.reference ?? "none"}`,
                   `released_at = ${selectedTask.payout?.releasedAt ?? "none"}`,
                 ]}
               />
