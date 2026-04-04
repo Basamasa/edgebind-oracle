@@ -35,10 +35,13 @@
 - The active persistence path now requires `DATABASE_URL` and creates/uses real Postgres tables.
 - Demo users are seeded into the database during bootstrap; task state is no longer stored in memory.
 - Audit result: the core execution loop is now deployment-shaped, but `World`/`Hedera`/`Ledger` are still not implemented.
+- Architecture note:
+  - `/owner` is intended to stay
+  - `/worker` is temporary and should not become a permanent second worker product surface
 
 ## Mobile
 - Stack: Vite + React 19 + TypeScript PWA-style app.
-- Most advanced product surface in the repo today.
+- This should become the primary worker product surface once contract alignment happens.
 - Existing screens:
   - `Login` with mock credentials
   - `RequestList` for browsing open requests
@@ -50,7 +53,7 @@
   - submits `POST /api/verify`
   - falls back to mock requests if backend is unavailable
   - stores proof history in localStorage
-- Current mobile domain is request/proof oriented, which is close to the planned microtask flow.
+- Current mobile domain is request/proof oriented and does not match the new shared task API contract.
 - Auth is mock-only and local.
 - Mobile was intentionally left unchanged in this implementation pass.
 
@@ -79,10 +82,13 @@
 
 ## Current Recommendation
 - Keep API and UI together inside the Next.js app.
-- Use the web app as the end-to-end hackathon demo surface while mobile is developed separately.
+- Use the web app for the owner surface and shared backend runtime.
+- Treat mobile as the real worker client long-term.
+- Treat the current `/worker` web route as a temporary fallback only.
 - Use the DB-backed core as the baseline for all future work.
 - Run local workflow from the repo root with `npm install`, `npm run dev`, `npm run build`, and `npm test`.
 - Model `World` as the identity layer for both workers and human-backed agents, not just workers.
 - Defer `0G` entirely until the core product loop is complete and stable.
 - Keep mobile untouched during the rewrite.
+- Align mobile to the shared task lifecycle before calling the repo architecture complete.
 - Treat the current state as a production-shaped core loop that still needs external integrations before final demo claims.

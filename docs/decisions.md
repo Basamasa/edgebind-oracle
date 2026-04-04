@@ -34,13 +34,13 @@
 - Reason: validation alone does not express the “human-backed agent” story strongly enough.
 - Impact: after validation, the system should make a simple decision such as `auto_pay` or `requires_approval` before payout routing.
 
-### 9. Use Web As The Hackathon Worker Surface
-- Reason: the deployed demo must work end-to-end without depending on the separate mobile workstream.
-- Impact: `/work` now provides the worker browse -> accept -> submit -> outcome loop while mobile remains untouched.
+### 9. Use Web As A Temporary Worker Fallback Only
+- Reason: the deployed demo needed an internal fallback while the mobile workstream remained untouched.
+- Impact: `/work` and `/worker` should be treated as transitional surfaces, not the long-term worker product.
 
-### 10. Preserve The Landing Page And Add `/app` And `/work` For Product UI
-- Reason: the product needs a clear entry point plus separate owner and worker surfaces.
-- Impact: landing copy explains the product, `/app` serves owners, and `/work` serves workers.
+### 10. Preserve The Landing Page And Use Named Product Routes
+- Reason: route names should make role ownership obvious.
+- Impact: `/owner` is the real owner route, `/worker` is temporary fallback worker route, and `/app` plus `/work` remain only as compatibility redirects.
 
 ### 11. Seed Lifecycle Data For Demo Clarity
 - Reason: without modifying mobile in this pass, the app still needs visible examples of approval, payout, and rejection states.
@@ -80,8 +80,12 @@
 
 ### 20. Use `/owner` And `/worker` As The Real Product Routes
 - Reason: `/app` and `/work` were internal shorthand and made the product harder to understand.
-- Impact: `/owner` and `/worker` are now the primary routes, while `/app` and `/work` remain only as compatibility redirects.
+- Impact: `/owner` is the primary owner route, `/worker` is the current fallback worker route, and `/app` plus `/work` remain only as compatibility redirects.
+
+### 21. Converge On Web Owner + Mobile Worker
+- Reason: keeping two permanent worker clients would make the repo confusing and weaken the open-source architecture.
+- Impact: `frontend` should own owner UX and backend runtime, while `mobile` should become the primary worker client after API alignment.
 
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.
-- Which hosted persistence layer should replace the in-memory demo store for Vercel deployment.
+- Whether to keep the temporary web worker route after mobile integration is complete.

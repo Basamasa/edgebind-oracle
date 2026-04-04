@@ -24,10 +24,10 @@
 - [x] `GET /api/owners/:ownerId/tasks`
 
 ## Phase 4: Worker Flow
-- [x] Add worker-facing web flow under `/work` for the hackathon demo.
+- [x] Add a temporary worker-facing web flow under `/work` for fallback testing.
 - [x] Support task acceptance from a verified worker identity.
 - [x] Support proof submission and visible validation/payout result.
-- [ ] Keep mobile integration deferred because it is being developed separately.
+- [x] Keep mobile integration deferred because it is being developed separately.
 
 ## Phase 5: Web Owner Flow
 - [x] Rewrite the current web surface inside the new pure Next.js structure.
@@ -46,7 +46,9 @@
 ## Remaining Work
 - [x] Add real auth/session gating instead of worker/owner selection by query string or hidden form fields.
 - [x] Restrict payout approval so only the task owner or an explicit admin approver can approve a pending payout.
-- [ ] Integrate mobile against the new Next.js API routes when that parallel work is ready.
+- [ ] Align mobile from `GET /api/requests` + `POST /api/verify` to the shared task lifecycle API.
+- [ ] Decide whether to use short-term compatibility endpoints during mobile migration.
+- [ ] Remove or de-emphasize the temporary web worker route after mobile alignment.
 - [ ] Add a shared package or shared folder for API DTOs.
 - [x] Replace the in-memory demo store with durable hosted persistence for Vercel deployment.
 - [ ] Integrate `World` as the human verification foundation for both workers and human-backed agents.

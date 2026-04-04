@@ -1,19 +1,28 @@
 # Architecture
 
-## Proposed Product Shape
-- `mobile`: parallel worker client, intentionally untouched in this pass.
-- `frontend`: single pure Next.js app for owner UI, worker UI, and API/runtime.
-- standalone `backend`: removed.
+## Final Target Product Shape
+- `frontend`: single Next.js app for:
+  - public landing page
+  - owner dashboard
+  - shared server/API runtime
+- `mobile`: worker app for:
+  - browse tasks
+  - accept task
+  - capture proof
+  - submit proof
+  - view worker history and payout outcome
+- standalone `backend`: removed and should not return.
 
-## Active Delivery Boundary
+## Current Delivery Boundary
 - This implementation pass has collapsed `backend` into `frontend`.
-- `frontend` now carries the full hackathon demo flow under `/owner` and `/worker`.
+- `frontend` currently carries the owner flow plus a temporary `/worker` fallback route.
 - `mobile` remains out of scope for code changes in this pass.
 
 ## Why This Split
 - Mobile already contains the worker-side capture flow with camera + GPS.
 - The Next.js app is the best deployment target for Vercel.
 - The standalone backend is now an architectural mismatch for the desired deploy model.
+- Keeping a permanent worker web app plus a worker mobile app would make the repo harder to understand.
 
 ## Proposed Core Domain
 - `Task`
@@ -43,6 +52,20 @@
   - request validation for route handlers and actions
 - `frontend/lib/server/errors.ts`
   - API-friendly error handling
+
+## Role Ownership
+- `Owner`
+  - human operator behind a human-backed AI agent
+  - creates tasks
+  - monitors execution state
+  - approves only higher-risk payouts
+- `Worker`
+  - verified human who accepts and completes tasks
+  - uses the worker client to submit proof
+- `System`
+  - validates proof
+  - runs agent decisioning
+  - routes payout toward auto-pay or approval
 
 ## Proposed Task Lifecycle
 - `draft` (optional if we want web form save states; can be skipped in initial demo)
@@ -97,12 +120,12 @@
 - Current implementation uses an in-app approval action.
 - Target hackathon approval layer: `Ledger` for higher-risk payments only.
 
-## Frontend/Backend Integration
+## Frontend/Mobile/Backend Integration
 - Owner dashboard uses server actions and server-side data hydration.
-- Worker console uses server actions and server-side data hydration.
-- Next.js route handlers expose the same lifecycle over JSON for future mobile integration.
-- Mobile will call the same Next.js route handlers once integrated.
-- Shared DTO shapes should eventually move into a shared package or shared folder once implementation begins.
+- Next.js route handlers expose the shared lifecycle over JSON for mobile integration.
+- The current `/worker` web route is a temporary fallback for internal testing, not the desired long-term worker surface.
+- Mobile should become the primary worker client after contract alignment.
+- Shared DTO shapes should move into a shared folder or package once mobile integration starts.
 
 ## Local Developer Workflow
 - Root-level npm workspace commands now provide the single entry point for local usage:
@@ -112,7 +135,7 @@
   - `npm test`
 - `npm run dev` starts only the Next.js app.
 
-## Suggested Initial API
+## Shared API Shape
 - `POST /api/tasks`
 - `GET /api/tasks`
 - `GET /api/tasks/:id`
@@ -122,7 +145,7 @@
 - `GET /api/owners/:ownerId/tasks`
 - Future decision-specific API can remain internal if the decision runs during submission handling.
 
-## Target Next.js API Shape
+## Current Next.js API Shape
 - `app/api/users/route.ts`
 - `app/api/tasks/route.ts`
 - `app/api/tasks/[taskId]/route.ts`
@@ -140,3 +163,10 @@
 - Root `npm run build` passes and builds the Next.js app with Webpack in this environment.
 - `npm --prefix frontend run test` passes against the lifecycle suite using `pg-mem`.
 - The app exposes `/`, `/owner`, `/worker`, legacy redirects at `/app` and `/work`, and the task JSON routes under `/api/*`.
+
+## Architecture Direction
+- Keep `frontend` as the only backend/runtime.
+- Keep `mobile` as the long-term worker client.
+- Remove the need for the temporary web worker route after mobile aligns to the shared task API.
+- Add `World` first, `Hedera` second, and `Ledger` third.
+- Keep `0G` off the critical path.
