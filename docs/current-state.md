@@ -4,7 +4,7 @@
 - Root contains `frontend`, `mobile`, `contracts`, and `ios`.
 - This is a multi-app repo without a root workspace manager (`pnpm-workspace.yaml`, `turbo.json`, `nx.json` are absent).
 - `README.md` exists but was intentionally ignored for discovery.
-- Root `package.json` now points only to the Next.js app for local dev and builds.
+- Root `package.json` is now the primary npm workspace entrypoint for the Next.js app.
 
 ## Frontend
 - Stack: Next.js 16 App Router + React 19 + Tailwind 4 + shadcn/ui-style component set.
@@ -78,6 +78,7 @@
 - Keep API and UI together inside the Next.js app.
 - Use the web app as the end-to-end hackathon demo surface while mobile is developed separately.
 - Use the DB-backed core as the baseline for all future work.
+- Run local workflow from the repo root with `npm install`, `npm run dev`, `npm run build`, and `npm test`.
 - Model `World` as the identity layer for both workers and human-backed agents, not just workers.
 - Defer `0G` entirely until the core product loop is complete and stable.
 - Keep mobile untouched during the rewrite.

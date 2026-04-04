@@ -105,9 +105,11 @@
 - Shared DTO shapes should eventually move into a shared package or shared folder once implementation begins.
 
 ## Local Developer Workflow
-- Root-level scripts now provide a single entry point for local usage:
+- Root-level npm workspace commands now provide the single entry point for local usage:
+  - `npm install`
   - `npm run dev`
   - `npm run build`
+  - `npm test`
 - `npm run dev` starts only the Next.js app.
 
 ## Suggested Initial API

@@ -74,6 +74,10 @@
 - Reason: hidden form fields and query-string actor switching were too weak for the execution-layer model.
 - Impact: owner and worker actions are now bound to demo sessions, while real identity integration remains a later step.
 
+### 19. Use The Repo Root As The Only Normal npm Workflow Surface
+- Reason: asking the user to `cd frontend` for installs and scripts is avoidable friction in a single-app deployment target.
+- Impact: the repo now uses an npm workspace rooted at `/`, with one lockfile and root-level `npm install`, `npm run dev`, `npm run build`, and `npm test`.
+
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.
 - Which hosted persistence layer should replace the in-memory demo store for Vercel deployment.

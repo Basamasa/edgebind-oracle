@@ -1,10 +1,14 @@
 {
   "name": "edgebind-oracle",
   "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build -- --webpack",
-    "start": "npm --prefix frontend run start",
-    "lint": "npm --prefix frontend run lint"
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend -- --webpack",
+    "start": "npm run start --workspace frontend",
+    "lint": "npm run lint --workspace frontend",
+    "test": "npm run test --workspace frontend"
   }
 }
