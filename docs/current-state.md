@@ -25,6 +25,7 @@
   - server actions for owner task creation/approval and worker accept/submit flows
   - seeded demo store with open, accepted, pending approval, paid, and rejected tasks
 - The current demo store is in-memory and suited for demo flow, not durable production persistence.
+- Audit result: the app behaves like an execution-layer demo, not a marketplace, but several core guarantees are still demo-only rather than production-enforced.
 
 ## Mobile
 - Stack: Vite + React 19 + TypeScript PWA-style app.
@@ -65,6 +66,8 @@
 - Real `World`/`Hedera`/`Ledger` integrations.
 - Real worker client integration against the new Next.js API routes.
 - Automated tests beyond build verification.
+- Strong approval authorization: any owner/admin can currently approve any pending task.
+- Real deployment-safe state guarantees: the in-memory store will not behave reliably across serverless instances.
 
 ## Current Recommendation
 - Keep API and UI together inside the Next.js app.
@@ -73,3 +76,4 @@
 - Model `World` as the identity layer for both workers and human-backed agents, not just workers.
 - Defer `0G` entirely until the core product loop is complete and stable.
 - Keep mobile untouched during the rewrite.
+- Treat the current state as an internal demo milestone, not a ready execution-guarantee product.

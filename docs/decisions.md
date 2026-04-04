@@ -62,6 +62,14 @@
 - Reason: the core demo still needs worker flow, decisioning, and payout integration, and `0G` would dilute focus.
 - Impact: agent memory/task history are postponed until the main loop is complete.
 
+### 16. Treat Current Integrations As Claimed Targets, Not Completed Wiring
+- Reason: the UI currently references `World`, `Hedera`, and `Ledger`, but the implementation is still a local demo store plus server-side status transitions.
+- Impact: audit and planning should classify these as stubs until real gating or realistic simulation is added.
+
+### 17. Treat Deployment Safety As A Separate Requirement From Local Demo Correctness
+- Reason: the in-memory store makes the local flow coherent, but it cannot provide reliable guarantees on Vercel/serverless.
+- Impact: execution guarantees should not be considered satisfied until persistence and authority checks are durable.
+
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.
 - Which hosted persistence layer should replace the in-memory demo store for Vercel deployment.

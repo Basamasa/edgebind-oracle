@@ -44,6 +44,8 @@
 - [x] Add root-level developer workflow scripts for simpler local startup.
 
 ## Remaining Work
+- [ ] Add real auth/session gating instead of worker/owner selection by query string or hidden form fields.
+- [ ] Restrict payout approval so only the task owner or an explicit admin approver can approve a pending payout.
 - [ ] Integrate mobile against the new Next.js API routes when that parallel work is ready.
 - [ ] Add a shared package or shared folder for API DTOs.
 - [ ] Replace the in-memory demo store with durable hosted persistence for Vercel deployment.
@@ -52,3 +54,4 @@
 - [ ] Integrate `Ledger` for higher-risk manual approval flow.
 - [ ] `0G` deferred until after the core hackathon loop is fully working.
 - [ ] Add runtime/API smoke tests once the environment allows loopback connections or a test harness is added.
+- [ ] Add lifecycle tests that prove payment cannot move before validation and proof submission.
