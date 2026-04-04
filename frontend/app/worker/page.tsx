@@ -35,8 +35,8 @@ export default async function WorkerPage({
 
     return (
       <AuthGate
-        title="Worker sign-in"
-        description="This web worker flow exists to test the backend loop end-to-end while the separate mobile app is being developed in parallel."
+        title="web fallback"
+        description="Use the worker mobile app for normal execution. This route exists only as a browser fallback for runtime inspection and local testing."
         users={workers}
         formAction={signInWorkerAction}
         error={error}
@@ -74,15 +74,14 @@ export default async function WorkerPage({
         <header className="flex flex-col gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <div className="text-xs uppercase tracking-[0.24em] text-[#9cb089]">
-              Worker Flow
+              Web fallback
             </div>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-              Accept tasks and submit proof
+              Inspect and submit execution state
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[#cad3c2] md:text-base">
-              Signed in as {sessionUser.name}. This temporary web worker view is only for
-              testing the execution loop end-to-end while the phone app is developed
-              separately.
+              Signed in as {sessionUser.name}. The mobile app is the primary worker surface. This
+              page is only a browser fallback.
             </p>
           </div>
 
@@ -97,7 +96,7 @@ export default async function WorkerPage({
               href="/owner"
               className="rounded-full bg-[#d9ff66] px-5 py-2 text-sm font-semibold text-[#071110] transition hover:opacity-90"
             >
-              Owner dashboard
+              Owner control plane
             </Link>
             <form action={signOutAction}>
               <input type="hidden" name="redirectTo" value="/" />
@@ -249,7 +248,7 @@ export default async function WorkerPage({
                       <Field label="Image proof">
                         <input
                           name="imageDataUrl"
-                          placeholder="demo://fresh-proof"
+                          placeholder="live://capture-proof"
                           className="h-12 w-full rounded-2xl border border-white/10 bg-[#03110a] px-4 text-sm outline-none transition focus:border-[#d9ff66]/50"
                         />
                       </Field>

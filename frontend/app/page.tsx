@@ -3,53 +3,50 @@ import Link from "next/link"
 import { getWorldConfig } from "@/lib/world"
 
 const endpoints = [
-  { method: "GET", path: "/api/world/config", note: "read current World AgentKit status" },
-  { method: "POST", path: "/api/world/rp-signature", note: "mint a signed RP context for World verification" },
-  { method: "POST", path: "/api/world/verify", note: "verify the World proof and upgrade owner identity" },
-  { method: "POST", path: "/api/auth/dev/session", note: "local dev: mint signed session cookie" },
-  { method: "GET", path: "/api/auth/session", note: "inspect current identity and cookie session" },
-  { method: "POST", path: "/api/tasks", note: "create task as verified owner session" },
+  { method: "GET", path: "/api/world/config", note: "read world status" },
+  { method: "POST", path: "/api/world/rp-signature", note: "mint owner rp context" },
+  { method: "POST", path: "/api/world/verify", note: "verify owner proof" },
+  { method: "POST", path: "/api/auth/dev/session", note: "local dev only" },
+  { method: "GET", path: "/api/auth/session", note: "read current identity" },
+  { method: "POST", path: "/api/tasks", note: "create task" },
   { method: "GET", path: "/api/tasks/:taskId", note: "read task state" },
-  { method: "GET", path: "/api/auth/mobile/worker/profile", note: "read current verified worker profile" },
-  { method: "POST", path: "/api/auth/mobile/worker/profile", note: "set the worker Hedera payout account" },
-  { method: "POST", path: "/api/tasks/:taskId/accept", note: "accept as verified worker session" },
-  { method: "POST", path: "/api/tasks/:taskId/submissions", note: "submit proof as verified worker session" },
-  { method: "POST", path: "/api/tasks/:taskId/approve", note: "approve high-risk payout as owner/admin" },
+  { method: "POST", path: "/api/tasks/:taskId/accept", note: "worker accepts" },
+  { method: "POST", path: "/api/tasks/:taskId/submissions", note: "worker submits proof" },
+  { method: "POST", path: "/api/tasks/:taskId/approve", note: "release high-risk payout" },
+  { method: "GET", path: "/api/auth/mobile/worker/profile", note: "read worker payout profile" },
+  { method: "POST", path: "/api/auth/mobile/worker/profile", note: "set Hedera payout account" },
 ]
 
-const protocol = [
-  "read /api/world/config",
+const runbook = [
+  "GET /api/world/config",
   "bootstrap owner session in local dev",
-  "human behind the agent opens /owner and verifies with World",
-  "confirm identity.humanVerified = true",
-  "call POST /api/tasks",
-  "verified human accepts",
-  "worker sets Hedera payout account",
-  "verified human submits proof",
-  "runtime validates proof",
-  "HBAR payouts release on Hedera",
-  "high-risk waits for approval",
+  "open /owner for owner world verification",
+  "GET /api/auth/session until humanVerified = true",
+  "POST /api/tasks",
+  "worker verifies in mobile",
+  "worker accepts",
+  "worker submits proof",
+  "GET /api/tasks/:taskId",
+  "if pending_approval -> POST /api/tasks/:taskId/approve",
 ]
 
-const readConfigExample = `curl http://localhost:3000/api/world/config`
+const statusCurl = `curl http://localhost:3000/api/world/config`
 
-const devAuthExample = `curl -X POST http://localhost:3000/api/auth/dev/session \\
+const devSessionCurl = `curl -X POST http://localhost:3000/api/auth/dev/session \\
   -H "Content-Type: application/json" \\
   -c cookies.txt \\
   -d '{"userId":"owner-ava"}'`
 
-const sessionExample = `curl http://localhost:3000/api/auth/session \\
+const inspectSessionCurl = `curl http://localhost:3000/api/auth/session \\
   -b cookies.txt`
 
-const ownerVerifyExample = `open http://localhost:3000/owner
+const verifyOwnerStep = `open http://localhost:3000/owner
 
-# sign in as the owner session
-# tap verify_with_world
-# approve in World App
-# then re-run GET /api/auth/session and confirm:
-# identity.humanVerified = true`
+# sign in
+# verify with World
+# then re-run GET /api/auth/session`
 
-const createTaskExample = `curl -X POST http://localhost:3000/api/tasks \\
+const createTaskCurl = `curl -X POST http://localhost:3000/api/tasks \\
   -H "Content-Type: application/json" \\
   -b cookies.txt \\
   -d '{
@@ -78,95 +75,99 @@ const createTaskResponse = `{
   "rewardCurrency": "HBAR"
 }`
 
-const worldTargetExample = `npx @worldcoin/agentkit-cli register <agent-wallet-address>
+const pollTaskCurl = `curl http://localhost:3000/api/tasks/task_...`
 
-# complete verification in World App
-# register once per wallet
-# target identity = verified human behind agent wallet`
+const productionTarget = `target.owner_identity = verified human behind agent wallet
+target.worker_identity = verified human executor
+target.payout_rail = Hedera
+target.manual_approval = inside runtime
+target.owner_verification_surface = /owner
+target.worker_surface = https://edgebind-worker.vercel.app`
 
 export default function Home() {
   const world = getWorldConfig()
-  const currentVsTarget = `today.auth = dev_session_cookie
-today.cookie = edgebind_session
-today.owner_model = local owner session
-today.worker_model = verified human executor
-target.identity = World AgentKit
-target.owner_model = verified human behind agent wallet
-target.worker_model = verified human executor
-world.status = ${world.status}
-world.chain_id = ${world.chainId}`
 
-  const worldStatus = `provider = ${world.provider}
+  const runtimeState = `entrypoint = external agent
+primary_interface = api
+owner_surface = /owner
+worker_surface = https://edgebind-worker.vercel.app
+task_model = one_task_one_worker
+proof_gate = required_before_payout
+world.status = ${world.status}
+world.environment = ${world.environment}`
+
+  const worldState = `provider = ${world.provider}
 status = ${world.status}
-environment = ${world.environment}
 chain_id = ${world.chainId}
 app_id_configured = ${String(world.appIdConfigured)}
 action_id_configured = ${String(world.actionIdConfigured)}
 rp_id_configured = ${String(world.rpIdConfigured)}
 rp_signing_key_configured = ${String(world.rpSigningKeyConfigured)}
 rpc_url_configured = ${String(world.rpcUrlConfigured)}
-relay_url_configured = ${String(world.relayUrlConfigured)}
-agentbook_address = ${world.agentBookAddress ?? "unset"}`
+relay_url_configured = ${String(world.relayUrlConfigured)}`
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#efe4d2_0%,#f7f0e5_46%,#fbf7f2_100%)] px-4 py-6 text-[#171717] md:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(214,117,63,0.13),transparent_24%),radial-gradient(circle_at_top_right,rgba(13,124,131,0.12),transparent_28%),linear-gradient(180deg,#f0e4d1_0%,#f8f1e7_48%,#fcf8f2_100%)] px-4 py-6 text-[#171717] md:px-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <section className="rounded-[32px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_24px_60px_rgba(40,29,17,0.08)]">
-          <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">
-            agent bootstrap
-          </div>
-          <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <h1 className="font-mono text-3xl leading-tight md:text-5xl">
-                Load this page. Copy the commands. Create the task.
-              </h1>
-              <p className="mt-4 max-w-3xl font-mono text-sm leading-7 text-[#4e473d]">
-                Edgebind is API-first. In local dev, bootstrap a signed cookie. In production,
-                owner identity should move to a World AgentKit-backed wallet.
-              </p>
+        <section className="relative overflow-hidden rounded-[34px] border border-black/10 bg-[#fffaf2]/95 p-6 shadow-[0_30px_80px_rgba(40,29,17,0.10)]">
+          <div className="absolute inset-x-[42%] top-[-120px] h-[220px] rounded-full bg-[radial-gradient(circle,rgba(13,124,131,0.10),transparent_70%)]" />
+          <div className="absolute left-[-60px] top-[52%] h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(182,84,47,0.10),transparent_72%)]" />
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/owner"
-                  className="rounded-full border border-black/10 bg-white px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
-                >
-                  Open manual console
-                </Link>
-                <a
-                  href="https://edgebind-worker.vercel.app"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full border border-black/10 bg-white px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
-                >
-                  Open worker app
-                </a>
-              </div>
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#756b5e]">
+              <span className="h-2 w-2 rounded-full bg-[#d47042]" />
+              agent entrypoint
             </div>
 
-            <div className="grid gap-4">
-              <ConsoleBlock title="runtime">
-                {currentVsTarget}
-              </ConsoleBlock>
-              <ConsoleBlock title="world">
-                {worldStatus}
-              </ConsoleBlock>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div>
+                <h1 className="max-w-3xl font-mono text-3xl leading-tight tracking-[-0.04em] md:text-5xl">
+                  Read runtime state. Copy commands. Create task. Poll result.
+                </h1>
+                <p className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
+                  This page is for external agents. The API is the primary interface. The owner
+                  web exists for World verification and manual approval when payout risk is high.
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href="/owner"
+                    className="rounded-full border border-black/10 bg-[#171717] px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] text-white transition hover:bg-black"
+                  >
+                    open /owner
+                  </Link>
+                  <a
+                    href="https://edgebind-worker.vercel.app"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-black/10 bg-white px-5 py-3 font-mono text-xs uppercase tracking-[0.18em] transition hover:border-black/30"
+                  >
+                    open worker app
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <ConsoleBlock title="runtime_state">{runtimeState}</ConsoleBlock>
+                <ConsoleBlock title="world_state">{worldState}</ConsoleBlock>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="Endpoints" />
+            <SectionTitle title="routes" />
             <div className="mt-4 overflow-hidden rounded-[20px] border border-black/10 bg-white">
-              <div className="grid grid-cols-[84px_minmax(0,1.75fr)_minmax(0,1.35fr)] gap-3 border-b border-black/10 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
+              <div className="grid grid-cols-[84px_minmax(0,1.8fr)_minmax(0,1fr)] gap-3 border-b border-black/10 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
                 <div>method</div>
                 <div>path</div>
-                <div>note</div>
+                <div>role</div>
               </div>
               {endpoints.map((endpoint) => (
                 <div
                   key={`${endpoint.method}-${endpoint.path}`}
-                  className="grid grid-cols-[84px_minmax(0,1.75fr)_minmax(0,1.35fr)] gap-3 border-b border-black/10 px-4 py-3 font-mono text-sm text-[#302a24] last:border-b-0"
+                  className="grid grid-cols-[84px_minmax(0,1.8fr)_minmax(0,1fr)] gap-3 border-b border-black/10 px-4 py-3 font-mono text-sm text-[#302a24] last:border-b-0"
                 >
                   <div>{endpoint.method}</div>
                   <div className="break-all">{endpoint.path}</div>
@@ -177,9 +178,9 @@ agentbook_address = ${world.agentBookAddress ?? "unset"}`
           </section>
 
           <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="Protocol" />
+            <SectionTitle title="runbook" />
             <div className="mt-4 space-y-2">
-              {protocol.map((line, index) => (
+              {runbook.map((line, index) => (
                 <div
                   key={line}
                   className="grid grid-cols-[42px_minmax(0,1fr)] gap-3 rounded-[18px] border border-black/10 bg-white px-4 py-3 font-mono text-sm text-[#302a24]"
@@ -193,84 +194,14 @@ agentbook_address = ${world.agentBookAddress ?? "unset"}`
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="0. Read Current World Config" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {readConfigExample}
-            </pre>
-          </section>
-
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="1. Bootstrap Local Dev Auth" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {devAuthExample}
-            </pre>
-          </section>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-2">
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="2. Inspect Session Identity" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {sessionExample}
-            </pre>
-          </section>
-
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="3. Verify Owner With World" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {ownerVerifyExample}
-            </pre>
-          </section>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-2">
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="4. Create Task" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {createTaskExample}
-            </pre>
-          </section>
-
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="5. Expected Create Response" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {createTaskResponse}
-            </pre>
-          </section>
-
-          <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-            <SectionTitle title="6. World AgentKit Target Path" />
-            <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
-              {worldTargetExample}
-            </pre>
-            <div className="mt-4 flex flex-wrap gap-3 font-mono text-xs uppercase tracking-[0.16em] text-[#756b5e]">
-              <a
-                href={world.repoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full border border-black/10 bg-white px-4 py-2 transition hover:border-black/30"
-              >
-                agentkit repo
-              </a>
-              <a
-                href={world.docsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full border border-black/10 bg-white px-4 py-2 transition hover:border-black/30"
-              >
-                sdk docs
-              </a>
-              <a
-                href={world.worldAppUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full border border-black/10 bg-white px-4 py-2 transition hover:border-black/30"
-              >
-                world app
-              </a>
-            </div>
-          </section>
+          <CommandCard title="0.read_world_config" code={statusCurl} />
+          <CommandCard title="1.bootstrap_local_dev" code={devSessionCurl} />
+          <CommandCard title="2.inspect_session" code={inspectSessionCurl} />
+          <CommandCard title="3.complete_owner_verification" code={verifyOwnerStep} />
+          <CommandCard title="4.create_task" code={createTaskCurl} />
+          <CommandCard title="5.create_task_response" code={createTaskResponse} />
+          <CommandCard title="6.poll_task_state" code={pollTaskCurl} />
+          <CommandCard title="7.production_target" code={productionTarget} />
         </section>
       </div>
     </main>
@@ -287,5 +218,16 @@ function ConsoleBlock({ title, children }: { title: string; children: string }) 
       <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">{title}</div>
       <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{children}</pre>
     </div>
+  )
+}
+
+function CommandCard({ title, code }: { title: string; code: string }) {
+  return (
+    <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+      <SectionTitle title={title} />
+      <pre className="mt-4 overflow-x-auto rounded-[20px] border border-black/10 bg-white p-4 font-mono text-sm leading-7 text-[#302a24]">
+        {code}
+      </pre>
+    </section>
   )
 }

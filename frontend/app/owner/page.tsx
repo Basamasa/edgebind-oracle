@@ -119,16 +119,14 @@ export default async function OwnerPage({
   const sessionUser = await getSessionUser()
   const world = getWorldConfig()
   const hedera = getHederaConfig()
+  const isLocalDev = process.env.NODE_ENV !== "production"
 
   if (!sessionUser || (sessionUser.role !== "owner" && sessionUser.role !== "admin")) {
-    const owners = await listUsers("owner")
     return (
-      <AuthGate
-        title="owner sign-in"
-        description="Start the manual console session."
-        users={owners}
-        formAction={signInOwnerAction}
+      <OwnerEntryGate
         error={error}
+        isLocalDev={isLocalDev}
+        users={isLocalDev ? await listUsers("owner") : []}
       />
     )
   }
@@ -215,10 +213,10 @@ export default async function OwnerPage({
         <header className="flex flex-col gap-4 rounded-[28px] border border-black/10 bg-[#fffaf2] px-5 py-4 shadow-[0_18px_50px_rgba(40,29,17,0.08)] md:flex-row md:items-center md:justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">
-              owner console
+              owner control plane
             </div>
             <div className="mt-2 font-mono text-sm text-[#4e473d]">
-              one task, one worker
+              create task, review proof, release payout
             </div>
           </div>
 
@@ -254,9 +252,9 @@ export default async function OwnerPage({
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
-          <SummaryCard label="open_or_active" value={String(activeTasks.length)} copy="Tasks still in progress." />
-          <SummaryCard label="needs_approval" value={String(needsApproval.length)} copy="High-risk payouts waiting for release." />
-          <SummaryCard label="total_tasks" value={String(tasks.length)} copy="Tasks created by this owner only." />
+          <SummaryCard label="open_or_active" value={String(activeTasks.length)} copy="Still moving through execution." />
+          <SummaryCard label="needs_approval" value={String(needsApproval.length)} copy="Awaiting release decision." />
+          <SummaryCard label="total_tasks" value={String(tasks.length)} copy="Visible to this owner session." />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -433,7 +431,7 @@ validation = deterministic
 payout_path = auto_release | manual_approval
 risk_threshold = 25 USD
 rail = Hedera
-manual_layer = Ledger(high_risk_only)`}
+manual_layer = runtime_approval(high_risk_only)`}
               </pre>
             </section>
 
@@ -604,45 +602,84 @@ escalate_if = ${contract.escalateIf}`}
   )
 }
 
-function AuthGate({
-  title,
-  description,
+function OwnerEntryGate({
+  isLocalDev,
   users,
-  formAction,
   error,
 }: {
-  title: string
-  description: string
+  isLocalDev: boolean
   users: Array<{ id: string; name: string }>
-  formAction: (formData: FormData) => Promise<void>
   error: string
 }) {
   return (
     <main className="min-h-screen bg-[#f3ede3] px-4 py-6 text-[#171717]">
-      <div className="mx-auto max-w-3xl rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
-        <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">{title}</div>
-        <div className="mt-3 font-mono text-sm text-[#4e473d]">{description}</div>
+      <div className="mx-auto max-w-4xl space-y-5">
+        <section className="rounded-[28px] border border-black/10 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+          <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#756b5e]">
+            owner entry
+          </div>
+          <h1 className="mt-4 font-mono text-3xl leading-tight tracking-[-0.04em] text-[#171717] md:text-4xl">
+            Owner access requires World verification.
+          </h1>
+          <div className="mt-4 max-w-2xl font-mono text-sm leading-7 text-[#4e473d]">
+            Arrive with a valid owner session, verify the human behind it, then create tasks or
+            release high-risk payouts.
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[22px] border border-black/10 bg-white p-4">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
+                production
+              </div>
+              <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{`1. obtain owner session
+2. open /owner
+3. complete World verification
+4. create task or approve payout`}</pre>
+            </div>
+
+            <div className="rounded-[22px] border border-black/10 bg-white p-4">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#756b5e]">
+                required
+              </div>
+              <pre className="mt-3 overflow-x-auto font-mono text-sm leading-7 text-[#302a24]">{`identity = owner | admin
+human_verified = true
+session = edgebind_session
+dev_picker = hidden_in_production`}</pre>
+            </div>
+          </div>
+        </section>
 
         {error ? (
-          <div className="mt-5 rounded-[20px] border border-[#a2322d]/20 bg-[#ffefec] px-4 py-3 font-mono text-xs text-[#a2322d]">
+          <div className="rounded-[20px] border border-[#a2322d]/20 bg-[#ffefec] px-4 py-3 font-mono text-xs text-[#a2322d]">
             {error}
           </div>
         ) : null}
 
-        <div className="mt-5 space-y-3">
-          {users.map((user) => (
-            <form key={user.id} action={formAction}>
-              <button
-                type="submit"
-                name="userId"
-                value={user.id}
-                className="w-full rounded-[20px] border border-black/10 bg-white px-4 py-4 text-left font-mono text-sm transition hover:border-black/30"
-              >
-                {user.name}
-              </button>
-            </form>
-          ))}
-        </div>
+        {isLocalDev ? (
+          <section className="rounded-[28px] border border-[#8b7d69]/20 bg-[#fffaf2] p-6 shadow-[0_18px_50px_rgba(40,29,17,0.08)]">
+            <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#8b7d69]">
+              local dev only
+            </div>
+            <div className="mt-3 font-mono text-sm text-[#4e473d]">
+              Seeded owner sessions are available only for local testing.
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {users.map((user) => (
+                <form key={user.id} action={signInOwnerAction}>
+                  <button
+                    type="submit"
+                    name="userId"
+                    value={user.id}
+                    className="w-full rounded-[20px] border border-black/10 bg-white px-4 py-4 text-left font-mono text-sm transition hover:border-black/30"
+                  >
+                    {user.name}
+                  </button>
+                </form>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   )
