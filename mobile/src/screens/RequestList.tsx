@@ -8,10 +8,11 @@ interface Props {
   user: string
   onSignOut: () => void
   onHistory: () => void
+  onCreate: () => void
   historyCount: number
 }
 
-export default function RequestList({ requests, onSelect, user, onSignOut, onHistory, historyCount }: Props) {
+export default function RequestList({ requests, onSelect, user, onSignOut, onHistory, historyCount, onCreate }: Props) {
 
   const timeLeft = (deadline: string) => {
     const diff = new Date(deadline).getTime() - Date.now()
@@ -55,7 +56,10 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
           Open requests
         </div>
-        <div style={{ fontSize: '22px', fontWeight: 500 }}>{requests.length} active</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '22px', fontWeight: 500 }}>{requests.length} active</div>
+          <button onClick={onCreate} style={{ fontSize: '13px', background: 'none', border: '0.5px solid #333', borderRadius: '8px', padding: '7px 14px', color: '#f0f0f0', cursor: 'pointer' }}>+ New</button>
+        </div>
       </div>
 
       {/* list */}

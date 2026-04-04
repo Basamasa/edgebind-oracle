@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Login from './screens/Login'
 import RequestList from './screens/RequestList'
 import History, { saveToHistory, loadHistory } from './screens/History'
+import CreateRequest from './screens/CreateRequest'
 import type { HistoryEntry } from './screens/History'
 import { MOCK_REQUESTS, GRADIENT } from './data/mock'
 import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
-type View = 'list' | 'capture' | 'history'
+type View = 'list' | 'capture' | 'history' | 'create'
 
 interface Coords {
   lat: number
@@ -178,12 +179,16 @@ export default function App() {
 
   if (!user) return <Login onLogin={setUser} />
 
+  if (view === 'create') return (
+    <CreateRequest onBack={() => setView('list')} onCreated={(r) => { setRequests(prev => [r, ...prev]); setView('list') }} user={user} onSignOut={signOut} />
+  )
+
   if (view === 'history') return (
     <History onBack={() => setView('list')} user={user!} onSignOut={signOut} />
   )
 
   if (view === 'list') return (
-    <RequestList requests={requests} onSelect={selectRequest} user={user!} onSignOut={signOut} onHistory={() => { stopCam(); setView('history') }} historyCount={historyCount} />
+    <RequestList requests={requests} onSelect={selectRequest} user={user!} onSignOut={signOut} onHistory={() => { stopCam(); setView('history') }} historyCount={historyCount} onCreate={() => setView('create')} />
   )
 
   if (screen === 'ready') return (
@@ -292,3 +297,5 @@ export default function App() {
 
   return null
 }
+// CreateRequest is imported at the top — add this line manually at the top of App.tsx:
+// import CreateRequest from './screens/CreateRequest'
