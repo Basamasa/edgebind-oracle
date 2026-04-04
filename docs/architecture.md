@@ -84,6 +84,15 @@
 - Mobile calls the same backend JSON routes.
 - Shared DTO shapes should eventually move into a shared package or shared folder once implementation begins.
 
+## Local Developer Workflow
+- Root-level scripts now provide a single entry point for local usage:
+  - `npm run setup`
+  - `npm run dev`
+  - `npm run build`
+- `npm run dev` starts:
+  - backend on `http://localhost:3001`
+  - frontend on `http://localhost:3000`
+
 ## Suggested Initial API
 - `POST /api/tasks`
 - `GET /api/tasks`

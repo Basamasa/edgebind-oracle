@@ -39,6 +39,7 @@
 - [ ] Add lightweight comments where logic is non-obvious.
 - [ ] Add basic verification tests for lifecycle transitions.
 - [x] Refresh docs after each implementation phase.
+- [x] Add root-level developer workflow scripts for simpler local startup.
 
 ## Remaining Work
 - [ ] Integrate mobile against the new backend task APIs when that parallel work is ready.

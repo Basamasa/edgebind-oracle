@@ -42,6 +42,10 @@
 - Reason: `next build` with Turbopack failed here due sandboxed process/port restrictions during CSS processing.
 - Impact: `npm run build -- --webpack` is the reliable verification command for the current environment.
 
+### 11. Add Root-Level Convenience Scripts
+- Reason: the repo previously had no root `package.json`, which made local startup confusing.
+- Impact: local testing is now reduced to `npm run setup` once and `npm run dev` from the repo root.
+
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.
 - Whether proof images should remain as inline data URLs for demo speed or move immediately to a storage abstraction.

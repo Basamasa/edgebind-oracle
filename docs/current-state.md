@@ -4,6 +4,7 @@
 - Root contains `backend`, `frontend`, `mobile`, `contracts`, and `ios`.
 - This is a multi-app repo without a root workspace manager (`pnpm-workspace.yaml`, `turbo.json`, `nx.json` are absent).
 - `README.md` exists but was intentionally ignored for discovery.
+- Root now has a lightweight `package.json` with convenience scripts for setup, local dev, and builds across backend + frontend.
 
 ## Backend
 - Stack: Node.js + TypeScript + Express 5 + Drizzle ORM + SQLite (`backend/package.json`, `backend/drizzle.config.ts`).
