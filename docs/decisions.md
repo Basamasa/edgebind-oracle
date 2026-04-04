@@ -78,6 +78,10 @@
 - Reason: asking the user to `cd frontend` for installs and scripts is avoidable friction in a single-app deployment target.
 - Impact: the repo now uses an npm workspace rooted at `/`, with one lockfile and root-level `npm install`, `npm run dev`, `npm run build`, and `npm test`.
 
+### 20. Use `/owner` And `/worker` As The Real Product Routes
+- Reason: `/app` and `/work` were internal shorthand and made the product harder to understand.
+- Impact: `/owner` and `/worker` are now the primary routes, while `/app` and `/work` remain only as compatibility redirects.
+
 ## Open Decisions
 - Whether to keep temporary compatibility endpoints (`/api/requests`, `/api/verify`) during migration or update mobile in one pass.
 - Which hosted persistence layer should replace the in-memory demo store for Vercel deployment.

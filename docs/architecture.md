@@ -7,7 +7,7 @@
 
 ## Active Delivery Boundary
 - This implementation pass has collapsed `backend` into `frontend`.
-- `frontend` now carries the full hackathon demo flow under `/app` and `/work`.
+- `frontend` now carries the full hackathon demo flow under `/owner` and `/worker`.
 - `mobile` remains out of scope for code changes in this pass.
 
 ## Why This Split
@@ -139,4 +139,4 @@
 ## Verification Notes
 - Root `npm run build` passes and builds the Next.js app with Webpack in this environment.
 - `npm --prefix frontend run test` passes against the lifecycle suite using `pg-mem`.
-- The app exposes `/`, `/app`, `/work`, and the task JSON routes under `/api/*`.
+- The app exposes `/`, `/owner`, `/worker`, legacy redirects at `/app` and `/work`, and the task JSON routes under `/api/*`.

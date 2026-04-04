@@ -11,8 +11,10 @@
 - This is now the only web/backend surface in the repo.
 - Current product surface includes:
   - `frontend/app/page.tsx`
-  - `frontend/app/app/page.tsx`
-  - `frontend/app/work/page.tsx`
+  - `frontend/app/owner/page.tsx`
+  - `frontend/app/worker/page.tsx`
+  - `frontend/app/app/page.tsx` (legacy redirect)
+  - `frontend/app/work/page.tsx` (legacy redirect)
   - `frontend/app/api/**`
   - `frontend/app/auth/actions.ts`
   - `frontend/lib/server/db.ts`
@@ -20,8 +22,9 @@
   - `frontend/lib/server/task-service.ts`
   - `frontend/tests/lifecycle.test.ts`
 - Implemented app capabilities:
-  - landing page plus owner dashboard under `/app`
-  - worker console under `/work`
+  - simple landing page that routes users into the correct role
+  - owner dashboard under `/owner`
+  - temporary worker web flow under `/worker`
   - cookie-bound demo auth for owner and worker sessions
   - Next.js route handlers for users, tasks, task detail, accept, submit, approve, and owner task list
   - database-backed task lifecycle logic inside the Next.js app

@@ -18,16 +18,16 @@ export async function acceptTaskAction(formData: FormData) {
     const worker = await requireVerifiedWorkerSession()
     await acceptTask(taskId, { workerId: worker.id })
 
-    revalidatePath("/work")
+    revalidatePath("/worker")
     redirect(
-      `/work${toQueryString({
+      `/worker${toQueryString({
         task: taskId,
         notice: "Task accepted. Submit proof to continue.",
       })}`,
     )
   } catch (error) {
     redirect(
-      `/work${toQueryString({
+      `/worker${toQueryString({
         task: taskId,
         error: errorMessage(error),
       })}`,
@@ -60,17 +60,17 @@ export async function submitTaskAction(formData: FormData) {
           : undefined,
     })
 
-    revalidatePath("/work")
-    revalidatePath("/app")
+    revalidatePath("/worker")
+    revalidatePath("/owner")
     redirect(
-      `/work${toQueryString({
+      `/worker${toQueryString({
         task: taskId,
         notice: "Proof submitted. Validation and payout state updated.",
       })}`,
     )
   } catch (error) {
     redirect(
-      `/work${toQueryString({
+      `/worker${toQueryString({
         task: taskId,
         error: errorMessage(error),
       })}`,

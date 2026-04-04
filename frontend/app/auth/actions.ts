@@ -40,7 +40,7 @@ export async function signInOwnerAction(formData: FormData) {
   await signInAsRole(
     String(formData.get("userId") ?? ""),
     "owner",
-    "/app",
+    "/owner",
     "Select a valid owner session",
   )
 }
@@ -49,7 +49,7 @@ export async function signInWorkerAction(formData: FormData) {
   await signInAsRole(
     String(formData.get("userId") ?? ""),
     "worker",
-    "/work",
+    "/worker",
     "Select a valid worker session",
   )
 }

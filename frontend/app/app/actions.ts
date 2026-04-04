@@ -38,15 +38,16 @@ export async function createTaskAction(formData: FormData) {
     })
 
     revalidatePath("/app")
+    revalidatePath("/owner")
     redirect(
-      `/app${toQueryString({
+      `/owner${toQueryString({
         task: task.id,
         notice: "Task created successfully.",
       })}`,
     )
   } catch (error) {
     redirect(
-      `/app${toQueryString({
+      `/owner${toQueryString({
         error: errorMessage(error),
       })}`,
     )
@@ -65,15 +66,16 @@ export async function approveTaskAction(formData: FormData) {
     })
 
     revalidatePath("/app")
+    revalidatePath("/owner")
     redirect(
-      `/app${toQueryString({
+      `/owner${toQueryString({
         task: taskId,
         notice: "Payout approved.",
       })}`,
     )
   } catch (error) {
     redirect(
-      `/app${toQueryString({
+      `/owner${toQueryString({
         task: taskId,
         error: errorMessage(error),
       })}`,
