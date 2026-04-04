@@ -3,8 +3,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'EdgeBind — Proof Unlocks Payment',
-  description: 'Lock a payment that only releases when someone physically proves they were at the right place, at the right time. No trust required — just proof.',
+  title: 'Edgebind Oracle',
+  description: 'A pure Next.js control plane for human-backed AI agent microtasks.',
   icons: {
     icon: [
       {
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className="font-sans antialiased">
         {children}
         <Analytics />

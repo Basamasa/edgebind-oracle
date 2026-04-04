@@ -2,12 +2,9 @@
   "name": "edgebind-oracle",
   "private": true,
   "scripts": {
-    "setup": "npm --prefix backend rebuild better-sqlite3 || npm --prefix backend install",
-    "dev": "npm run dev:backend & npm run dev:frontend & wait",
-    "dev:backend": "PORT=3001 FRONTEND_ORIGIN=http://localhost:3000 npm --prefix backend run dev",
-    "dev:frontend": "NEXT_PUBLIC_API_URL=http://localhost:3001/api npm --prefix frontend run dev",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "npm --prefix backend run build",
-    "build:frontend": "npm --prefix frontend run build -- --webpack"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build -- --webpack",
+    "start": "npm --prefix frontend run start",
+    "lint": "npm --prefix frontend run lint"
   }
 }

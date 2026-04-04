@@ -2,8 +2,8 @@
 
 ## Status
 - Approved for implementation with one active constraint:
-- this implementation pass covers backend and web only.
-- mobile is intentionally excluded because it is being worked on in parallel.
+- web/backend are being rewritten as a single pure Next.js app.
+- mobile remains intentionally excluded because it is being worked on in parallel.
 
 ## Product Goal
 - Build a simple, demoable human-backed AI agent microtask app with one clean end-to-end flow.
@@ -74,6 +74,5 @@
 - Preserve demoability even if integrations are mocked behind stable interfaces.
 
 ## Delivery Scope For This Pass
-- Implement backend as the system of record and workflow engine.
-- Implement web as the owner/admin interface.
+- Implement a single pure Next.js app as both UI and API/runtime.
 - Do not modify the mobile app in this pass.

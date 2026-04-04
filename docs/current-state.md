@@ -1,51 +1,27 @@
 # Current State
 
 ## Repository Shape
-- Root contains `backend`, `frontend`, `mobile`, `contracts`, and `ios`.
+- Root contains `frontend`, `mobile`, `contracts`, and `ios`.
 - This is a multi-app repo without a root workspace manager (`pnpm-workspace.yaml`, `turbo.json`, `nx.json` are absent).
 - `README.md` exists but was intentionally ignored for discovery.
-- Root now has a lightweight `package.json` with convenience scripts for setup, local dev, and builds across backend + frontend.
-
-## Backend
-- Stack: Node.js + TypeScript + Express 5 + Drizzle ORM + SQLite (`backend/package.json`, `backend/drizzle.config.ts`).
-- Backend is now implemented as a working task lifecycle API.
-- Implemented backend capabilities:
-  - app bootstrap, env parsing, JSON API routing, CORS, and error handling
-  - SQLite schema bootstrap for `users`, `tasks`, `task_submissions`, `validation_results`, and `payouts`
-  - seeded demo data covering `open`, `accepted`, `pending_approval`, `paid`, and `rejected` task states
-  - task creation, acceptance, proof submission, validation, and approval flows
-  - payment and human-verification demo abstractions
-- Implemented API routes:
-  - `GET /api/users`
-  - `GET /api/tasks`
-  - `GET /api/tasks/:taskId`
-  - `POST /api/tasks`
-  - `POST /api/tasks/:taskId/accept`
-  - `POST /api/tasks/:taskId/submissions`
-  - `POST /api/tasks/:taskId/approve`
-  - `GET /api/owners/:ownerId/tasks`
-- Environment hints suggest planned integrations:
-  - SQLite/Postgres-compatible DB URL
-  - contract address / RPC URL
-  - 0G storage
-  - World ID app ID
+- Root `package.json` now points only to the Next.js app for local dev and builds.
 
 ## Frontend
 - Stack: Next.js 16 App Router + React 19 + Tailwind 4 + shadcn/ui-style component set.
-- Current product surface now includes:
+- This is now the only web/backend surface in the repo.
+- Current product surface includes:
   - `frontend/app/page.tsx`
   - `frontend/app/app/page.tsx`
-  - `frontend/components/navigation.tsx`
-  - `frontend/components/hero.tsx`
-  - `frontend/components/owner-dashboard.tsx`
-- Implemented web features:
-  - owner selector
-  - task creation form
-  - approval queue
-  - task inventory and detail panel
-  - direct backend API integration
-- Landing page remains in place and now routes CTAs into `/app`.
-- Strong reusable asset: extensive ready-made UI primitives under `frontend/components/ui/**`.
+  - `frontend/app/api/**`
+  - `frontend/lib/server/demo-store.ts`
+  - `frontend/lib/server/task-service.ts`
+- Implemented app capabilities:
+  - landing page plus owner console under `/app`
+  - Next.js route handlers for users, tasks, task detail, accept, submit, approve, and owner task list
+  - server-side task lifecycle logic inside the Next.js app
+  - server actions for owner task creation and approval
+  - seeded demo store with open, accepted, pending approval, paid, and rejected tasks
+- The current demo store is in-memory and suited for demo flow, not durable production persistence.
 
 ## Mobile
 - Stack: Vite + React 19 + TypeScript PWA-style app.
@@ -82,11 +58,12 @@
 ## Missing Pieces
 - Shared types between apps.
 - Real auth/session model.
-- Real worker client integration against the new backend task APIs.
+- Real worker client integration against the new Next.js API routes.
+- Durable hosted persistence for Vercel deployment.
 - Real storage/payment/human-verification integrations.
 - Automated tests beyond build verification.
 
 ## Current Recommendation
-- Reuse the mobile request/proof flow as the worker experience foundation when mobile integration resumes.
-- Keep the current backend contracts stable so mobile can adopt them without web-specific branching.
-- Preserve the web dashboard as the owner/admin control plane for demos.
+- Keep API and UI together inside the Next.js app.
+- Replace the demo in-memory store with a hosted database in a later pass.
+- Keep mobile untouched during the rewrite.
