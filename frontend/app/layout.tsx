@@ -1,12 +1,6 @@
 import type { Metadata } from 'next'
-import { Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-
-const syne = Syne({
-  subsets: ["latin"],
-  variable: '--font-syne',
-})
 
 export const metadata: Metadata = {
   title: 'EdgeBind — Proof Unlocks Payment',
@@ -37,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${syne.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         {children}
         <Analytics />
       </body>

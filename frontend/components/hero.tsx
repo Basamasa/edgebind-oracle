@@ -48,21 +48,21 @@ export function Hero() {
         >
           {/* Primary button - gradient */}
           <Link
-            href="/get-started"
+            href="/app"
             className="inline-flex items-center justify-center px-8 py-4 text-base font-semibold text-white transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-lg"
             style={{
               background: 'linear-gradient(90deg, #D21056 0%, #FF6B35 100%)',
             }}
           >
-            Get Started
+            Open Owner Dashboard
           </Link>
 
           {/* Secondary button - ghost/outline */}
           <Link
-            href="/demo"
+            href="/app"
             className="inline-flex items-center justify-center border border-white/30 bg-transparent px-8 py-4 text-base font-semibold text-white transition-all duration-300 ease-in-out hover:scale-[1.02] hover:border-white/50 hover:shadow-lg"
           >
-            Get a Demo
+            View Demo Tasks
           </Link>
         </div>
       </div>

@@ -9,6 +9,8 @@ dist/
 # Logs and DB
 *.log
 *.db
+*.db-wal
+*.db-shm
 
 # Frontend specific overrides
 __v0_runtime_loader.js

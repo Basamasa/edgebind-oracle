@@ -75,7 +75,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-syne), 'system-ui', 'sans-serif';
+  --font-sans: 'Avenir Next', 'Helvetica Neue', 'Segoe UI', 'system-ui', 'sans-serif';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);

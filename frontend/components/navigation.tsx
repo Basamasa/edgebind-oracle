@@ -31,13 +31,13 @@ export function Navigation() {
             X
           </Link>
           <Link
-            href="/account"
+            href="/app"
             className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-lg"
             style={{
               background: 'linear-gradient(90deg, #D21056 0%, #FF6B35 100%)',
             }}
           >
-            Account
+            Open App
           </Link>
         </div>
       </div>
