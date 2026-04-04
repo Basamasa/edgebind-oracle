@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { taskId } = await context.params
-    return NextResponse.json(getTaskById(taskId))
+    return NextResponse.json(await getTaskById(taskId))
   } catch (error) {
     return toErrorResponse(error)
   }

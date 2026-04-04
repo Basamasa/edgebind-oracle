@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { toQueryString } from "@/lib/format"
+import { requireVerifiedWorkerSession } from "@/lib/server/session"
 import { acceptTask, submitTask } from "@/lib/server/task-service"
 
 function errorMessage(error: unknown) {
@@ -11,16 +12,15 @@ function errorMessage(error: unknown) {
 }
 
 export async function acceptTaskAction(formData: FormData) {
-  const workerId = String(formData.get("workerId") ?? "")
   const taskId = String(formData.get("taskId") ?? "")
 
   try {
-    acceptTask(taskId, { workerId })
+    const worker = await requireVerifiedWorkerSession()
+    await acceptTask(taskId, { workerId: worker.id })
 
     revalidatePath("/work")
     redirect(
       `/work${toQueryString({
-        worker: workerId,
         task: taskId,
         notice: "Task accepted. Submit proof to continue.",
       })}`,
@@ -28,7 +28,6 @@ export async function acceptTaskAction(formData: FormData) {
   } catch (error) {
     redirect(
       `/work${toQueryString({
-        worker: workerId,
         task: taskId,
         error: errorMessage(error),
       })}`,
@@ -37,7 +36,6 @@ export async function acceptTaskAction(formData: FormData) {
 }
 
 export async function submitTaskAction(formData: FormData) {
-  const workerId = String(formData.get("workerId") ?? "")
   const taskId = String(formData.get("taskId") ?? "")
   const requestCode = String(formData.get("requestCode") ?? "")
   const imageDataUrl = String(formData.get("imageDataUrl") ?? "").trim()
@@ -46,8 +44,10 @@ export async function submitTaskAction(formData: FormData) {
   const accuracyMeters = String(formData.get("accuracyMeters") ?? "").trim()
 
   try {
-    submitTask(taskId, {
-      workerId,
+    const worker = await requireVerifiedWorkerSession()
+
+    await submitTask(taskId, {
+      workerId: worker.id,
       requestCode,
       imageDataUrl: imageDataUrl || undefined,
       location:
@@ -64,7 +64,6 @@ export async function submitTaskAction(formData: FormData) {
     revalidatePath("/app")
     redirect(
       `/work${toQueryString({
-        worker: workerId,
         task: taskId,
         notice: "Proof submitted. Validation and payout state updated.",
       })}`,
@@ -72,7 +71,6 @@ export async function submitTaskAction(formData: FormData) {
   } catch (error) {
     redirect(
       `/work${toQueryString({
-        worker: workerId,
         task: taskId,
         error: errorMessage(error),
       })}`,

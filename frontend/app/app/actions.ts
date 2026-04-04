@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { toQueryString } from "@/lib/format"
+import { requireSessionRole } from "@/lib/server/session"
 import { approveTask, createTask } from "@/lib/server/task-service"
 
 function errorMessage(error: unknown) {
@@ -11,13 +12,12 @@ function errorMessage(error: unknown) {
 }
 
 export async function createTaskAction(formData: FormData) {
-  const ownerId = String(formData.get("ownerId") ?? "")
-
   try {
+    const owner = await requireSessionRole(["owner", "admin"])
     const rawDeadline = String(formData.get("deadline") ?? "")
 
-    const task = createTask({
-      ownerId,
+    const task = await createTask({
+      ownerId: owner.id,
       agentRef: String(formData.get("agentRef") ?? ""),
       title: String(formData.get("title") ?? ""),
       description: String(formData.get("description") ?? ""),
@@ -40,7 +40,6 @@ export async function createTaskAction(formData: FormData) {
     revalidatePath("/app")
     redirect(
       `/app${toQueryString({
-        owner: ownerId,
         task: task.id,
         notice: "Task created successfully.",
       })}`,
@@ -48,7 +47,6 @@ export async function createTaskAction(formData: FormData) {
   } catch (error) {
     redirect(
       `/app${toQueryString({
-        owner: ownerId,
         error: errorMessage(error),
       })}`,
     )
@@ -56,19 +54,19 @@ export async function createTaskAction(formData: FormData) {
 }
 
 export async function approveTaskAction(formData: FormData) {
-  const ownerId = String(formData.get("ownerId") ?? "")
   const taskId = String(formData.get("taskId") ?? "")
 
   try {
-    approveTask(taskId, {
-      approverId: ownerId,
+    const approver = await requireSessionRole(["owner", "admin"])
+
+    await approveTask(taskId, {
+      approverId: approver.id,
       approvalNote: "Approved from the owner dashboard after the agent escalated payout.",
     })
 
     revalidatePath("/app")
     redirect(
       `/app${toQueryString({
-        owner: ownerId,
         task: taskId,
         notice: "Payout approved.",
       })}`,
@@ -76,7 +74,6 @@ export async function approveTaskAction(formData: FormData) {
   } catch (error) {
     redirect(
       `/app${toQueryString({
-        owner: ownerId,
         task: taskId,
         error: errorMessage(error),
       })}`,

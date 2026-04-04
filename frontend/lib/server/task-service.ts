@@ -1,4 +1,4 @@
-import "server-only"
+import type { PoolClient } from "pg"
 
 import type {
   AgentDecision,
@@ -10,6 +10,7 @@ import type {
   UserSummary,
   ValidationRecord,
 } from "@/lib/domain"
+import { dbQuery, withTransaction } from "@/lib/server/db"
 import { AppError } from "@/lib/server/errors"
 import {
   acceptTaskSchema,
@@ -18,14 +19,80 @@ import {
   submitTaskSchema,
 } from "@/lib/server/schemas"
 
-import { getDemoStore } from "./demo-store"
-
 const DEFAULT_APPROVAL_THRESHOLD_AMOUNT = 25
 
 type ListTaskFilters = {
   ownerId?: string
   workerId?: string
   status?: string
+}
+
+type UserRow = {
+  id: string
+  name: string
+  role: UserSummary["role"]
+  is_human_verified: boolean
+}
+
+type TaskRow = {
+  id: string
+  title: string
+  description: string
+  reward_amount: number
+  reward_currency: string
+  deadline: string | Date
+  proof_type: ProofType
+  location_label: string | null
+  location_lat: number | null
+  location_lng: number | null
+  location_radius_meters: number | null
+  status: TaskRecord["status"]
+  owner_id: string
+  agent_ref: string
+  worker_id: string | null
+  request_code: string
+  approval_threshold_amount: number
+  accepted_at: string | Date | null
+  completed_at: string | Date | null
+  created_at: string | Date
+  updated_at: string | Date
+}
+
+type SubmissionRow = {
+  id: string
+  task_id: string
+  worker_id: string
+  submitted_at: string | Date
+  image_url: string | null
+  location_lat: number | null
+  location_lng: number | null
+  location_accuracy_meters: number | null
+  request_code: string
+  status: SubmissionRecord["status"]
+  created_at: string | Date
+}
+
+type ValidationRow = {
+  id: string
+  submission_id: string
+  valid: boolean
+  reason: string
+  requires_approval: boolean
+  agent_decision: AgentDecision | null
+  created_at: string | Date
+}
+
+type PayoutRow = {
+  id: string
+  task_id: string
+  status: PayoutRecord["status"]
+  amount: number
+  currency: string
+  released_at: string | Date | null
+  approved_by: string | null
+  approval_note: string | null
+  created_at: string | Date
+  updated_at: string | Date
 }
 
 function nowIso() {
@@ -40,54 +107,208 @@ function randomRequestCode() {
   return `TASK-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
 }
 
-function findUser(userId: string) {
-  const user = getDemoStore().users.find((entry) => entry.id === userId)
+function toIso(value: string | Date | null | undefined) {
+  if (!value) {
+    return null
+  }
 
-  if (!user) {
+  return new Date(value).toISOString()
+}
+
+function mapUser(row: UserRow): UserSummary {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    isHumanVerified: row.is_human_verified,
+  }
+}
+
+function mapTask(row: TaskRow): TaskRecord {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    rewardAmount: row.reward_amount,
+    rewardCurrency: row.reward_currency,
+    deadline: toIso(row.deadline) ?? nowIso(),
+    proofType: row.proof_type,
+    locationRequirement:
+      row.location_lat !== null &&
+      row.location_lng !== null &&
+      row.location_radius_meters !== null
+        ? {
+            label: row.location_label,
+            latitude: row.location_lat,
+            longitude: row.location_lng,
+            radiusMeters: row.location_radius_meters,
+          }
+        : null,
+    status: row.status,
+    ownerId: row.owner_id,
+    agentRef: row.agent_ref,
+    workerId: row.worker_id,
+    requestCode: row.request_code,
+    approvalThresholdAmount: row.approval_threshold_amount,
+    acceptedAt: toIso(row.accepted_at),
+    completedAt: toIso(row.completed_at),
+    createdAt: toIso(row.created_at) ?? nowIso(),
+    updatedAt: toIso(row.updated_at) ?? nowIso(),
+  }
+}
+
+function mapSubmission(row: SubmissionRow): SubmissionRecord {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    workerId: row.worker_id,
+    submittedAt: toIso(row.submitted_at) ?? nowIso(),
+    imageUrl: row.image_url,
+    location:
+      row.location_lat !== null && row.location_lng !== null
+        ? {
+            latitude: row.location_lat,
+            longitude: row.location_lng,
+            accuracyMeters: row.location_accuracy_meters,
+          }
+        : null,
+    requestCode: row.request_code,
+    status: row.status,
+    createdAt: toIso(row.created_at) ?? nowIso(),
+  }
+}
+
+function mapValidation(row: ValidationRow): ValidationRecord {
+  return {
+    id: row.id,
+    submissionId: row.submission_id,
+    valid: row.valid,
+    reason: row.reason,
+    requiresApproval: row.requires_approval,
+    agentDecision: row.agent_decision,
+    createdAt: toIso(row.created_at) ?? nowIso(),
+  }
+}
+
+function mapPayout(row: PayoutRow): PayoutRecord {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    status: row.status,
+    amount: row.amount,
+    currency: row.currency,
+    releasedAt: toIso(row.released_at),
+    approvedBy: row.approved_by,
+    approvalNote: row.approval_note,
+    createdAt: toIso(row.created_at) ?? nowIso(),
+    updatedAt: toIso(row.updated_at) ?? nowIso(),
+  }
+}
+
+async function findUser(userId: string, executor?: PoolClient) {
+  const result = await dbQuery<UserRow>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId], executor)
+  const row = result.rows[0]
+
+  if (!row) {
     throw new AppError(404, `User ${userId} was not found`)
   }
 
-  return user
+  return mapUser(row)
 }
 
-function findTask(taskId: string) {
-  const task = getDemoStore().tasks.find((entry) => entry.id === taskId)
+async function findTaskRow(taskId: string, executor?: PoolClient, forUpdate = false) {
+  const result = await dbQuery<TaskRow>(
+    `SELECT * FROM tasks WHERE id = $1 LIMIT 1${forUpdate ? " FOR UPDATE" : ""}`,
+    [taskId],
+    executor,
+  )
 
-  if (!task) {
+  const row = result.rows[0]
+  if (!row) {
     throw new AppError(404, `Task ${taskId} was not found`)
   }
 
-  return task
+  return row
 }
 
-function payoutForTask(taskId: string) {
-  return getDemoStore().payouts.find((entry) => entry.taskId === taskId) ?? null
+async function payoutForTask(taskId: string, executor?: PoolClient) {
+  const result = await dbQuery<PayoutRow>(
+    `SELECT * FROM payouts WHERE task_id = $1 LIMIT 1`,
+    [taskId],
+    executor,
+  )
+
+  return result.rows[0] ? mapPayout(result.rows[0]) : null
 }
 
-function latestSubmissionForTask(taskId: string) {
-  return getDemoStore()
-    .submissions.filter((entry) => entry.taskId === taskId)
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
+async function latestSubmissionForTask(taskId: string, executor?: PoolClient, forUpdate = false) {
+  const result = await dbQuery<SubmissionRow>(
+    `
+      SELECT * FROM submissions
+      WHERE task_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1${forUpdate ? " FOR UPDATE" : ""}
+    `,
+    [taskId],
+    executor,
+  )
+
+  return result.rows[0] ? mapSubmission(result.rows[0]) : null
 }
 
-function validationForSubmission(submissionId: string | undefined) {
+async function validationForSubmission(submissionId: string | undefined, executor?: PoolClient) {
   if (!submissionId) {
     return null
   }
 
-  return getDemoStore().validations.find((entry) => entry.submissionId === submissionId) ?? null
+  const result = await dbQuery<ValidationRow>(
+    `SELECT * FROM validations WHERE submission_id = $1 LIMIT 1`,
+    [submissionId],
+    executor,
+  )
+
+  return result.rows[0] ? mapValidation(result.rows[0]) : null
 }
 
-function upsertPayout(values: PayoutRecord) {
-  const store = getDemoStore()
-  const index = store.payouts.findIndex((entry) => entry.taskId === values.taskId)
-
-  if (index >= 0) {
-    store.payouts[index] = values
-    return
-  }
-
-  store.payouts.push(values)
+async function upsertPayout(values: PayoutRecord, executor: PoolClient) {
+  await dbQuery(
+    `
+      INSERT INTO payouts (
+        id,
+        task_id,
+        status,
+        amount,
+        currency,
+        released_at,
+        approved_by,
+        approval_note,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (task_id) DO UPDATE
+      SET status = EXCLUDED.status,
+          amount = EXCLUDED.amount,
+          currency = EXCLUDED.currency,
+          released_at = EXCLUDED.released_at,
+          approved_by = EXCLUDED.approved_by,
+          approval_note = EXCLUDED.approval_note,
+          updated_at = EXCLUDED.updated_at
+    `,
+    [
+      values.id,
+      values.taskId,
+      values.status,
+      values.amount,
+      values.currency,
+      values.releasedAt,
+      values.approvedBy,
+      values.approvalNote,
+      values.createdAt,
+      values.updatedAt,
+    ],
+    executor,
+  )
 }
 
 function distanceInMeters(
@@ -110,15 +331,17 @@ function distanceInMeters(
   return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function syncExpiredTasks() {
+async function syncExpiredTasks(executor?: PoolClient) {
   const timestamp = nowIso()
-
-  for (const task of getDemoStore().tasks) {
-    if ((task.status === "open" || task.status === "accepted") && task.deadline < timestamp) {
-      task.status = "expired"
-      task.updatedAt = timestamp
-    }
-  }
+  await dbQuery(
+    `
+      UPDATE tasks
+      SET status = 'expired', updated_at = $1
+      WHERE status IN ('open', 'accepted') AND deadline < $1
+    `,
+    [timestamp],
+    executor,
+  )
 }
 
 function assertOwnerOrAdmin(user: UserSummary) {
@@ -137,60 +360,80 @@ function assertVerifiedWorker(user: UserSummary) {
   }
 }
 
-function releasePayment(task: TaskRecord, approvedBy?: string, approvalNote?: string) {
+async function releasePayment(
+  task: TaskRecord,
+  executor: PoolClient,
+  approvedBy?: string,
+  approvalNote?: string,
+) {
   const timestamp = nowIso()
-  upsertPayout({
-    id: `payout-${task.id}`,
-    taskId: task.id,
-    status: "released",
-    amount: task.rewardAmount,
-    currency: task.rewardCurrency,
-    releasedAt: timestamp,
-    approvedBy: approvedBy ?? null,
-    approvalNote: approvalNote ?? "Auto-approved below threshold.",
-    createdAt: payoutForTask(task.id)?.createdAt ?? timestamp,
-    updatedAt: timestamp,
-  })
+  const existing = await payoutForTask(task.id, executor)
+
+  await upsertPayout(
+    {
+      id: existing?.id ?? `payout-${task.id}`,
+      taskId: task.id,
+      status: "released",
+      amount: task.rewardAmount,
+      currency: task.rewardCurrency,
+      releasedAt: timestamp,
+      approvedBy: approvedBy ?? null,
+      approvalNote: approvalNote ?? "Auto-approved below threshold.",
+      createdAt: existing?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    },
+    executor,
+  )
 }
 
-function markPendingApproval(task: TaskRecord) {
+async function markPendingApproval(task: TaskRecord, executor: PoolClient) {
   const timestamp = nowIso()
-  upsertPayout({
-    id: `payout-${task.id}`,
-    taskId: task.id,
-    status: "pending_approval",
-    amount: task.rewardAmount,
-    currency: task.rewardCurrency,
-    releasedAt: null,
-    approvedBy: null,
-    approvalNote: "Awaiting manual approval above threshold.",
-    createdAt: payoutForTask(task.id)?.createdAt ?? timestamp,
-    updatedAt: timestamp,
-  })
+  const existing = await payoutForTask(task.id, executor)
+
+  await upsertPayout(
+    {
+      id: existing?.id ?? `payout-${task.id}`,
+      taskId: task.id,
+      status: "pending_approval",
+      amount: task.rewardAmount,
+      currency: task.rewardCurrency,
+      releasedAt: null,
+      approvedBy: null,
+      approvalNote: "Awaiting manual approval above threshold.",
+      createdAt: existing?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    },
+    executor,
+  )
 }
 
-function cancelPayment(task: TaskRecord, note: string) {
+async function cancelPayment(task: TaskRecord, note: string, executor: PoolClient) {
   const timestamp = nowIso()
-  upsertPayout({
-    id: `payout-${task.id}`,
-    taskId: task.id,
-    status: "cancelled",
-    amount: task.rewardAmount,
-    currency: task.rewardCurrency,
-    releasedAt: null,
-    approvedBy: null,
-    approvalNote: note,
-    createdAt: payoutForTask(task.id)?.createdAt ?? timestamp,
-    updatedAt: timestamp,
-  })
+  const existing = await payoutForTask(task.id, executor)
+
+  await upsertPayout(
+    {
+      id: existing?.id ?? `payout-${task.id}`,
+      taskId: task.id,
+      status: "cancelled",
+      amount: task.rewardAmount,
+      currency: task.rewardCurrency,
+      releasedAt: null,
+      approvedBy: null,
+      approvalNote: note,
+      createdAt: existing?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    },
+    executor,
+  )
 }
 
-function toTaskView(task: TaskRecord): TaskView {
-  const owner = findUser(task.ownerId)
-  const worker = task.workerId ? findUser(task.workerId) : null
-  const latestSubmission = latestSubmissionForTask(task.id)
-  const validation = validationForSubmission(latestSubmission?.id)
-  const payout = payoutForTask(task.id)
+async function toTaskView(task: TaskRecord): Promise<TaskView> {
+  const owner = await findUser(task.ownerId)
+  const worker = task.workerId ? await findUser(task.workerId) : null
+  const latestSubmission = await latestSubmissionForTask(task.id)
+  const validation = await validationForSubmission(latestSubmission?.id)
+  const payout = await payoutForTask(task.id)
 
   return {
     id: task.id,
@@ -319,42 +562,54 @@ function evaluateSubmission(
   }
 }
 
-export function listUsers(role?: string) {
-  return role ? getDemoStore().users.filter((entry) => entry.role === role) : getDemoStore().users
+export async function listUsers(role?: string) {
+  const result = role
+    ? await dbQuery<UserRow>(`SELECT * FROM users WHERE role = $1 ORDER BY name ASC`, [role])
+    : await dbQuery<UserRow>(`SELECT * FROM users ORDER BY name ASC`)
+
+  return result.rows.map(mapUser)
 }
 
-export function listTasks(filters: ListTaskFilters = {}) {
-  syncExpiredTasks()
+export async function listTasks(filters: ListTaskFilters = {}) {
+  await syncExpiredTasks()
 
-  return getDemoStore()
-    .tasks.filter((task) => {
-      if (filters.ownerId && task.ownerId !== filters.ownerId) {
-        return false
-      }
-      if (filters.workerId && task.workerId !== filters.workerId) {
-        return false
-      }
-      if (filters.status && task.status !== filters.status) {
-        return false
-      }
-      return true
-    })
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-    .map(toTaskView)
+  const clauses: string[] = []
+  const params: unknown[] = []
+
+  if (filters.ownerId) {
+    params.push(filters.ownerId)
+    clauses.push(`owner_id = $${params.length}`)
+  }
+  if (filters.workerId) {
+    params.push(filters.workerId)
+    clauses.push(`worker_id = $${params.length}`)
+  }
+  if (filters.status) {
+    params.push(filters.status)
+    clauses.push(`status = $${params.length}`)
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : ""
+  const result = await dbQuery<TaskRow>(
+    `SELECT * FROM tasks ${whereClause} ORDER BY created_at DESC`,
+    params,
+  )
+
+  return Promise.all(result.rows.map((row) => toTaskView(mapTask(row))))
 }
 
-export function listOwnerTasks(ownerId: string) {
+export async function listOwnerTasks(ownerId: string) {
   return listTasks({ ownerId })
 }
 
-export function getTaskById(taskId: string) {
-  syncExpiredTasks()
-  return toTaskView(findTask(taskId))
+export async function getTaskById(taskId: string) {
+  await syncExpiredTasks()
+  return toTaskView(mapTask(await findTaskRow(taskId)))
 }
 
-export function createTask(input: unknown) {
+export async function createTask(input: unknown) {
   const data = createTaskSchema.parse(input)
-  const owner = findUser(data.ownerId)
+  const owner = await findUser(data.ownerId)
   assertOwnerOrAdmin(owner)
 
   const deadline = new Date(data.deadline)
@@ -390,128 +645,297 @@ export function createTask(input: unknown) {
     updatedAt: nowIso(),
   }
 
-  getDemoStore().tasks.push(task)
+  await dbQuery(
+    `
+      INSERT INTO tasks (
+        id,
+        title,
+        description,
+        reward_amount,
+        reward_currency,
+        deadline,
+        proof_type,
+        location_label,
+        location_lat,
+        location_lng,
+        location_radius_meters,
+        status,
+        owner_id,
+        agent_ref,
+        worker_id,
+        request_code,
+        approval_threshold_amount,
+        accepted_at,
+        completed_at,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+    `,
+    [
+      task.id,
+      task.title,
+      task.description,
+      task.rewardAmount,
+      task.rewardCurrency,
+      task.deadline,
+      task.proofType,
+      task.locationRequirement?.label ?? null,
+      task.locationRequirement?.latitude ?? null,
+      task.locationRequirement?.longitude ?? null,
+      task.locationRequirement?.radiusMeters ?? null,
+      task.status,
+      task.ownerId,
+      task.agentRef,
+      task.workerId,
+      task.requestCode,
+      task.approvalThresholdAmount,
+      task.acceptedAt,
+      task.completedAt,
+      task.createdAt,
+      task.updatedAt,
+    ],
+  )
+
   return getTaskById(task.id)
 }
 
-export function acceptTask(taskId: string, input: unknown) {
-  syncExpiredTasks()
+export async function acceptTask(taskId: string, input: unknown) {
+  await syncExpiredTasks()
 
   const data = acceptTaskSchema.parse(input)
-  const task = findTask(taskId)
-  const worker = findUser(data.workerId)
 
-  if (task.status !== "open") {
-    throw new AppError(409, `Task ${taskId} is not open for acceptance`)
-  }
+  return withTransaction(async (client) => {
+    const taskRow = await findTaskRow(taskId, client, true)
+    const task = mapTask(taskRow)
+    const worker = await findUser(data.workerId, client)
 
-  assertVerifiedWorker(worker)
+    if (task.status !== "open") {
+      throw new AppError(409, `Task ${taskId} is not open for acceptance`)
+    }
 
-  const timestamp = nowIso()
-  task.status = "accepted"
-  task.workerId = worker.id
-  task.acceptedAt = timestamp
-  task.updatedAt = timestamp
+    assertVerifiedWorker(worker)
 
-  return getTaskById(taskId)
+    const timestamp = nowIso()
+    await dbQuery(
+      `
+        UPDATE tasks
+        SET status = 'accepted',
+            worker_id = $2,
+            accepted_at = $3,
+            updated_at = $3
+        WHERE id = $1
+      `,
+      [taskId, worker.id, timestamp],
+      client,
+    )
+  }).then(() => getTaskById(taskId))
 }
 
-export function submitTask(taskId: string, input: unknown) {
-  syncExpiredTasks()
+export async function submitTask(taskId: string, input: unknown) {
+  await syncExpiredTasks()
 
   const data = submitTaskSchema.parse(input)
-  const task = findTask(taskId)
 
-  if (task.status !== "accepted") {
-    throw new AppError(409, `Task ${taskId} is not ready for submission`)
-  }
+  return withTransaction(async (client) => {
+    const taskRow = await findTaskRow(taskId, client, true)
+    const task = mapTask(taskRow)
 
-  if (!task.workerId || task.workerId !== data.workerId) {
-    throw new AppError(403, "Only the assigned worker can submit proof")
-  }
+    if (task.status !== "accepted") {
+      throw new AppError(409, `Task ${taskId} is not ready for submission`)
+    }
 
-  const timestamp = nowIso()
-  task.status = "submitted"
-  task.updatedAt = timestamp
+    if (!task.workerId || task.workerId !== data.workerId) {
+      throw new AppError(403, "Only the assigned worker can submit proof")
+    }
 
-  const submission: SubmissionRecord = {
-    id: randomId("submission"),
-    taskId: task.id,
-    workerId: data.workerId,
-    submittedAt: data.submittedAt ?? timestamp,
-    imageUrl: data.imageDataUrl ?? null,
-    location: data.location
-      ? {
-          latitude: data.location.latitude,
-          longitude: data.location.longitude,
-          accuracyMeters: data.location.accuracyMeters ?? null,
-        }
-      : null,
-    requestCode: data.requestCode.trim().toUpperCase(),
-    status: "submitted",
-    createdAt: timestamp,
-  }
+    const timestamp = nowIso()
+    await dbQuery(
+      `UPDATE tasks SET status = 'submitted', updated_at = $2 WHERE id = $1`,
+      [taskId, timestamp],
+      client,
+    )
 
-  getDemoStore().submissions.push(submission)
+    const submission: SubmissionRecord = {
+      id: randomId("submission"),
+      taskId: task.id,
+      workerId: data.workerId,
+      submittedAt: data.submittedAt ?? timestamp,
+      imageUrl: data.imageDataUrl ?? null,
+      location: data.location
+        ? {
+            latitude: data.location.latitude,
+            longitude: data.location.longitude,
+            accuracyMeters: data.location.accuracyMeters ?? null,
+          }
+        : null,
+      requestCode: data.requestCode.trim().toUpperCase(),
+      status: "submitted",
+      createdAt: timestamp,
+    }
 
-  const validationResult = evaluateSubmission(task, data)
-  const validation: ValidationRecord = {
-    id: randomId("validation"),
-    submissionId: submission.id,
-    valid: validationResult.valid,
-    reason: validationResult.reason,
-    requiresApproval: validationResult.requiresApproval,
-    agentDecision: validationResult.agentDecision,
-    createdAt: timestamp,
-  }
-  getDemoStore().validations.push(validation)
+    await dbQuery(
+      `
+        INSERT INTO submissions (
+          id,
+          task_id,
+          worker_id,
+          submitted_at,
+          image_url,
+          location_lat,
+          location_lng,
+          location_accuracy_meters,
+          request_code,
+          status,
+          created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `,
+      [
+        submission.id,
+        submission.taskId,
+        submission.workerId,
+        submission.submittedAt,
+        submission.imageUrl,
+        submission.location?.latitude ?? null,
+        submission.location?.longitude ?? null,
+        submission.location?.accuracyMeters ?? null,
+        submission.requestCode,
+        submission.status,
+        submission.createdAt,
+      ],
+      client,
+    )
 
-  if (!validation.valid) {
-    submission.status = "invalid"
-    task.status = "rejected"
-    task.completedAt = timestamp
-    task.updatedAt = timestamp
-    cancelPayment(task, validation.reason)
-    return getTaskById(taskId)
-  }
+    const validationResult = evaluateSubmission(task, data)
+    const validation: ValidationRecord = {
+      id: randomId("validation"),
+      submissionId: submission.id,
+      valid: validationResult.valid,
+      reason: validationResult.reason,
+      requiresApproval: validationResult.requiresApproval,
+      agentDecision: validationResult.agentDecision,
+      createdAt: timestamp,
+    }
 
-  submission.status = validation.agentDecision === "requires_approval" ? "valid" : "approved"
-  task.completedAt = timestamp
-  task.updatedAt = timestamp
+    await dbQuery(
+      `
+        INSERT INTO validations (
+          id,
+          submission_id,
+          valid,
+          reason,
+          requires_approval,
+          agent_decision,
+          created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [
+        validation.id,
+        validation.submissionId,
+        validation.valid,
+        validation.reason,
+        validation.requiresApproval,
+        validation.agentDecision,
+        validation.createdAt,
+      ],
+      client,
+    )
 
-  if (validation.agentDecision === "requires_approval") {
-    task.status = "pending_approval"
-    markPendingApproval(task)
-    return getTaskById(taskId)
-  }
+    if (!validation.valid) {
+      await dbQuery(`UPDATE submissions SET status = 'invalid' WHERE id = $1`, [submission.id], client)
+      await dbQuery(
+        `
+          UPDATE tasks
+          SET status = 'rejected',
+              completed_at = $2,
+              updated_at = $2
+          WHERE id = $1
+        `,
+        [taskId, timestamp],
+        client,
+      )
+      await cancelPayment(task, validation.reason, client)
+      return
+    }
 
-  task.status = "paid"
-  releasePayment(task)
-  return getTaskById(taskId)
+    const submissionStatus =
+      validation.agentDecision === "requires_approval" ? "valid" : "approved"
+    await dbQuery(
+      `UPDATE submissions SET status = $2 WHERE id = $1`,
+      [submission.id, submissionStatus],
+      client,
+    )
+
+    if (validation.agentDecision === "requires_approval") {
+      await dbQuery(
+        `
+          UPDATE tasks
+          SET status = 'pending_approval',
+              completed_at = $2,
+              updated_at = $2
+          WHERE id = $1
+        `,
+        [taskId, timestamp],
+        client,
+      )
+      await markPendingApproval(task, client)
+      return
+    }
+
+    await dbQuery(
+      `
+        UPDATE tasks
+        SET status = 'paid',
+            completed_at = $2,
+            updated_at = $2
+        WHERE id = $1
+      `,
+      [taskId, timestamp],
+      client,
+    )
+    await releasePayment(task, client)
+  }).then(() => getTaskById(taskId))
 }
 
-export function approveTask(taskId: string, input: unknown) {
+export async function approveTask(taskId: string, input: unknown) {
   const data = approveTaskSchema.parse(input)
-  const task = findTask(taskId)
-  const approver = findUser(data.approverId)
-  assertOwnerOrAdmin(approver)
 
-  if (task.status !== "pending_approval") {
-    throw new AppError(409, `Task ${taskId} is not awaiting approval`)
-  }
+  return withTransaction(async (client) => {
+    const taskRow = await findTaskRow(taskId, client, true)
+    const task = mapTask(taskRow)
+    const approver = await findUser(data.approverId, client)
+    assertOwnerOrAdmin(approver)
 
-  const latestSubmission = latestSubmissionForTask(task.id)
-  if (latestSubmission) {
-    latestSubmission.status = "approved"
-  }
+    if (approver.role !== "admin" && approver.id !== task.ownerId) {
+      throw new AppError(403, "Only the task owner or an admin approver can release this payout")
+    }
 
-  task.status = "paid"
-  task.updatedAt = nowIso()
-  releasePayment(
-    task,
-    approver.id,
-    data.approvalNote?.trim() || "Approved manually in the Next.js owner console.",
-  )
+    if (task.status !== "pending_approval") {
+      throw new AppError(409, `Task ${taskId} is not awaiting approval`)
+    }
 
-  return getTaskById(taskId)
+    const latestSubmission = await latestSubmissionForTask(task.id, client, true)
+    if (latestSubmission) {
+      await dbQuery(
+        `UPDATE submissions SET status = 'approved' WHERE id = $1`,
+        [latestSubmission.id],
+        client,
+      )
+    }
+
+    const timestamp = nowIso()
+    await dbQuery(
+      `UPDATE tasks SET status = 'paid', updated_at = $2 WHERE id = $1`,
+      [taskId, timestamp],
+      client,
+    )
+    await releasePayment(
+      task,
+      client,
+      approver.id,
+      data.approvalNote?.trim() || "Approved manually in the owner approval flow.",
+    )
+  }).then(() => getTaskById(taskId))
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { toErrorResponse } from "@/lib/server/errors"
+import { requireSessionRole } from "@/lib/server/session"
 import { approveTask } from "@/lib/server/task-service"
 
 export async function POST(
@@ -9,7 +10,15 @@ export async function POST(
 ) {
   try {
     const { taskId } = await context.params
-    return NextResponse.json(approveTask(taskId, await request.json()))
+    const approver = await requireSessionRole(["owner", "admin"])
+    const payload = await request.json().catch(() => ({}))
+
+    return NextResponse.json(
+      await approveTask(taskId, {
+        ...payload,
+        approverId: approver.id,
+      }),
+    )
   } catch (error) {
     return toErrorResponse(error)
   }

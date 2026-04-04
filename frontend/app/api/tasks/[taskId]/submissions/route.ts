@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { toErrorResponse } from "@/lib/server/errors"
+import { requireVerifiedWorkerSession } from "@/lib/server/session"
 import { submitTask } from "@/lib/server/task-service"
 
 export async function POST(
@@ -9,7 +10,15 @@ export async function POST(
 ) {
   try {
     const { taskId } = await context.params
-    return NextResponse.json(submitTask(taskId, await request.json()))
+    const worker = await requireVerifiedWorkerSession()
+    const payload = await request.json()
+
+    return NextResponse.json(
+      await submitTask(taskId, {
+        ...payload,
+        workerId: worker.id,
+      }),
+    )
   } catch (error) {
     return toErrorResponse(error)
   }
