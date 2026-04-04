@@ -62,7 +62,7 @@ export async function approveTaskAction(formData: FormData) {
   try {
     approveTask(taskId, {
       approverId: ownerId,
-      approvalNote: "Approved from the pure Next.js owner console.",
+      approvalNote: "Approved from the owner dashboard after the agent escalated payout.",
     })
 
     revalidatePath("/app")

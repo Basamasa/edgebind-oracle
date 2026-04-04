@@ -1,13 +1,14 @@
 # Architecture
 
 ## Proposed Product Shape
-- `mobile`: worker experience for browsing, accepting, proving, and tracking microtasks.
-- `frontend`: single pure Next.js app for owner/operator UI and API/runtime.
+- `mobile`: parallel worker client, intentionally untouched in this pass.
+- `frontend`: single pure Next.js app for owner UI, worker UI, and API/runtime.
 - standalone `backend`: removed.
 
 ## Active Delivery Boundary
 - This implementation pass has collapsed `backend` into `frontend`.
-- `mobile` remains the intended worker client, but it is out of scope for code changes in this pass.
+- `frontend` now carries the full hackathon demo flow under `/app` and `/work`.
+- `mobile` remains out of scope for code changes in this pass.
 
 ## Why This Split
 - Mobile already contains the worker-side capture flow with camera + GPS.
@@ -24,7 +25,10 @@
   - contains proof payload and metadata
 - `ValidationResult`
   - computed by backend validator
-  - returns valid/invalid, reason, approval flag
+  - returns valid/invalid, reason, and decision inputs
+- `AgentDecision`
+  - simple post-validation decision made by the human-backed agent layer
+  - outputs `auto_pay` or `requires_approval`
 - `Payout`
   - tracks whether payment is pending, released, rejected, or awaiting approval
 
@@ -43,7 +47,6 @@
 - `open`
 - `accepted`
 - `submitted`
-- `validated`
 - `pending_approval`
 - `paid`
 - `rejected`
@@ -58,25 +61,44 @@
   - location exists when required
   - location falls within task radius when required
   - image is present when proof type requires it
-- Approval policy:
-  - low-value valid tasks auto-transition to `paid`
-  - high-value valid tasks transition to `pending_approval`
+
+## Agent Decision Strategy
+- After proof validates, run a simple agent decision step.
+- Initial decision inputs:
+  - proof validity
+  - reward amount
+  - approval threshold
+  - optional future worker/task memory
+- Initial outputs:
+  - `auto_pay`
+  - `requires_approval`
 
 ## Payment Strategy
 - Current implementation uses task-service payout transitions in an in-memory demo store.
 - Keep interfaces ready for future contract integration once durable storage is added.
+- Target hackathon execution rail: `Hedera`.
 
 ## Human Verification Strategy
 - Current implementation trusts seeded demo users marked as verified humans.
-- Keep the service boundary clean for future World/human-verification integration.
+- Target hackathon identity layer: `World`.
+- `World` should support both:
+  - verified human workers
+  - human-backed agents making payout decisions
 
 ## Storage Strategy
 - Current implementation uses an in-memory demo store.
 - For demo speed, proof payloads remain inline values rather than durable media objects.
 - Replace this with hosted persistence in a later pass.
+- `0G` is deferred for now and should not be part of the active implementation path.
+
+## Manual Approval Strategy
+- Current implementation uses an in-app approval action.
+- Target hackathon approval layer: `Ledger` for higher-risk payments only.
 
 ## Frontend/Backend Integration
-- Frontend calls its own Next.js route handlers.
+- Owner dashboard uses server actions and server-side data hydration.
+- Worker console uses server actions and server-side data hydration.
+- Next.js route handlers expose the same lifecycle over JSON for future mobile integration.
 - Mobile will call the same Next.js route handlers once integrated.
 - Shared DTO shapes should eventually move into a shared package or shared folder once implementation begins.
 
@@ -94,6 +116,7 @@
 - `POST /api/tasks/:id/submissions`
 - `POST /api/tasks/:id/approve`
 - `GET /api/owners/:ownerId/tasks`
+- Future decision-specific API can remain internal if the decision runs during submission handling.
 
 ## Target Next.js API Shape
 - `app/api/users/route.ts`
@@ -111,4 +134,4 @@
 
 ## Verification Notes
 - Root `npm run build` passes and builds the Next.js app with Webpack in this environment.
-- The app exposes `/`, `/app`, and the task JSON routes under `/api/*`.
+- The app exposes `/`, `/app`, `/work`, and the task JSON routes under `/api/*`.

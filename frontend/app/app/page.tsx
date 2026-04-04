@@ -40,15 +40,14 @@ export default async function AppPage({
         <header className="flex flex-col gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
             <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-              Next.js Owner Console
+              Agent Owner Dashboard
             </div>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-              Human-backed task operations
+              Create tasks and release payouts
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[#c3cdc0] md:text-base">
-              This rewrite collapses UI, API routes, and lifecycle logic into one App
-              Router deployment. Owners create tasks, monitor proof, and approve
-              higher-value payouts from the same Next.js app.
+              Owners dispatch proof-based tasks, track validation results, and only step
+              in when the agent escalates a higher-risk payout for manual approval.
             </p>
           </div>
 
@@ -59,12 +58,12 @@ export default async function AppPage({
             >
               Back home
             </Link>
-            <a
-              href="/api/health"
+            <Link
+              href="/work"
               className="rounded-full bg-[#d9ff66] px-5 py-2 text-sm font-semibold text-[#071110] transition hover:opacity-90"
             >
-              API health
-            </a>
+              Open worker console
+            </Link>
           </div>
         </header>
 
@@ -106,13 +105,13 @@ export default async function AppPage({
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-6">
             <div className="flex items-end justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-                  Create
+                <div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
+                    Create
+                  </div>
+                  <h2 className="mt-2 text-2xl font-semibold">New microtask</h2>
                 </div>
-                <h2 className="mt-2 text-2xl font-semibold">New microtask</h2>
-              </div>
-              <div className="text-sm text-[#8ea38d]">Auto-pay below 25 USD</div>
+              <div className="text-sm text-[#8ea38d]">Agent auto-pays below 25 USD</div>
             </div>
 
             <form action={createTaskAction} className="mt-6 grid gap-4">
@@ -425,8 +424,12 @@ export default async function AppPage({
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <DetailCard
-                      label="Approval needed"
-                      value={selectedTask.validation?.requiresApproval ? "Yes" : "No"}
+                      label="Agent decision"
+                      value={
+                        selectedTask.validation?.agentDecision
+                          ? selectedTask.validation.agentDecision.replaceAll("_", " ")
+                          : "No decision yet"
+                      }
                     />
                     <DetailCard
                       label="Payout status"

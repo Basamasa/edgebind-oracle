@@ -11,7 +11,7 @@
 ## Core Roles
 - Agent owner: creates a microtask with reward, deadline, and proof requirements.
 - Worker: verified human who browses tasks, accepts one, and submits proof.
-- System/agent: validates proof and routes payout automatically or to manual approval.
+- System/agent: validates proof, makes a simple payout decision, and routes payment automatically or to manual approval.
 
 ## In Scope
 - Task creation by owner.
@@ -19,6 +19,7 @@
 - Task acceptance by a worker.
 - Proof submission with generic structure supporting image/location/request code.
 - Backend proof validation result.
+- Agent decision step after validation (`auto_pay` vs `requires_approval`).
 - Automatic payout release for low-value tasks.
 - Manual approval state for high-value tasks.
 - Visible task lifecycle in UI.
@@ -64,6 +65,7 @@
 ## Required Validation Result Fields
 - `valid`
 - `reason`
+- `agentDecision`
 - `requiresApproval`
 - `paymentStatus`
 
@@ -75,4 +77,11 @@
 
 ## Delivery Scope For This Pass
 - Implement a single pure Next.js app as both UI and API/runtime.
+- Use `/app` for owners and `/work` for workers in the deployed demo.
 - Do not modify the mobile app in this pass.
+
+## Hackathon Integration Intent
+- `World` is the identity and verification foundation for both verified human workers and human-backed agents.
+- `Hedera` is the payout/payment rail.
+- `Ledger` is the manual approval layer for higher-risk payments.
+- `0G` is explicitly out of scope for the current implementation pass.

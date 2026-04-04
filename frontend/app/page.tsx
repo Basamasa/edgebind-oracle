@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#1c2f2f,transparent_30%),linear-gradient(180deg,#071110,#020504)] px-6 py-8 text-[#f3f5ec] md:px-12">
@@ -7,55 +9,55 @@ export default function Home() {
             <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
               Edgebind Oracle
             </div>
-            <div className="mt-2 text-lg font-semibold">Pure Next.js Control Plane</div>
+            <div className="mt-2 text-lg font-semibold">Human-backed AI microtasks</div>
           </div>
-          <a
+          <Link
             href="/app"
             className="rounded-full bg-[#d9ff66] px-5 py-2 text-sm font-semibold text-[#071110] transition hover:opacity-90"
           >
-            Open App
-          </a>
+            Open dashboard
+          </Link>
         </div>
 
         <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.24em] text-[#8ea38d]">
-              One deployment surface
+              World verified. Hedera payouts. Ledger approvals.
             </p>
             <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight md:text-7xl">
-              Human-backed microtasks, now running as a single Next.js app.
+              Agents create tasks. Verified humans complete them. The system routes payout.
             </h1>
             <p className="max-w-2xl text-lg leading-8 text-[#b7c4b2]">
-              The owner dashboard, API routes, lifecycle engine, approval flow, and
-              demo data all live inside one App Router codebase. No separate Express
-              service.
+              Owners dispatch proof-based microtasks, workers submit evidence, the
+              backend validates it, and the agent decides whether to auto-pay or send
+              the payout to manual approval.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a
+              <Link
                 href="/app"
                 className="rounded-full bg-[#d9ff66] px-6 py-3 text-sm font-semibold text-[#071110] transition hover:opacity-90"
               >
-                Launch owner console
-              </a>
-              <a
-                href="/api/health"
+                Open owner dashboard
+              </Link>
+              <Link
+                href="/work"
                 className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-[#f3f5ec] transition hover:border-white/40"
               >
-                Check API health
-              </a>
+                Open worker console
+              </Link>
             </div>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-black/20 p-6 shadow-2xl shadow-black/30">
             <div className="text-xs uppercase tracking-[0.24em] text-[#8ea38d]">
-              Included in the rewrite
+              Core flow
             </div>
             <div className="mt-6 grid gap-4">
               {[
-                "App Router UI and route handlers in one deployment target",
-                "Server-side task lifecycle and approval logic",
-                "Demo-ready owner workflow under /app",
-                "JSON APIs for future mobile integration",
+                "Owner creates a proof-based microtask",
+                "World-verified worker accepts and submits proof",
+                "Validation runs and the agent chooses payout path",
+                "Low-risk pays automatically, high-risk waits for approval",
               ].map((item) => (
                 <div
                   key={item}

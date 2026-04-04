@@ -15,6 +15,8 @@ export type SubmissionStatus = "submitted" | "valid" | "invalid" | "approved"
 
 export type PayoutStatus = "pending_approval" | "released" | "cancelled"
 
+export type AgentDecision = "auto_pay" | "requires_approval"
+
 export type UserSummary = {
   id: string
   name: string
@@ -74,6 +76,7 @@ export type ValidationRecord = {
   valid: boolean
   reason: string
   requiresApproval: boolean
+  agentDecision: AgentDecision | null
   createdAt: string
 }
 
@@ -125,6 +128,7 @@ export type TaskView = {
         valid: boolean
         reason: string
         requiresApproval: boolean
+        agentDecision: AgentDecision | null
         createdAt: string
       }
     | null

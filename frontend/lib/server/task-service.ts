@@ -1,6 +1,7 @@
 import "server-only"
 
 import type {
+  AgentDecision,
   PayoutRecord,
   ProofType,
   SubmissionRecord,
@@ -226,6 +227,7 @@ function toTaskView(task: TaskRecord): TaskView {
           valid: validation.valid,
           reason: validation.reason,
           requiresApproval: validation.requiresApproval,
+          agentDecision: validation.agentDecision,
           createdAt: validation.createdAt,
         }
       : null,
@@ -249,7 +251,12 @@ function evaluateSubmission(
   const normalizedRequestCode = input.requestCode.trim().toUpperCase()
 
   if (normalizedRequestCode !== task.requestCode.trim().toUpperCase()) {
-    return { valid: false, reason: "Request code mismatch.", requiresApproval: false }
+    return {
+      valid: false,
+      reason: "Request code mismatch.",
+      requiresApproval: false,
+      agentDecision: null,
+    }
   }
 
   const submittedAt = input.submittedAt ?? nowIso()
@@ -258,15 +265,26 @@ function evaluateSubmission(
       valid: false,
       reason: "Submission missed the task deadline.",
       requiresApproval: false,
+      agentDecision: null,
     }
   }
 
   if ((task.proofType === "photo" || task.proofType === "photo_location") && !input.imageDataUrl) {
-    return { valid: false, reason: "Image proof is required.", requiresApproval: false }
+    return {
+      valid: false,
+      reason: "Image proof is required.",
+      requiresApproval: false,
+      agentDecision: null,
+    }
   }
 
   if ((task.proofType === "location" || task.proofType === "photo_location") && !input.location) {
-    return { valid: false, reason: "Location proof is required.", requiresApproval: false }
+    return {
+      valid: false,
+      reason: "Location proof is required.",
+      requiresApproval: false,
+      agentDecision: null,
+    }
   }
 
   if (task.locationRequirement && input.location) {
@@ -282,14 +300,22 @@ function evaluateSubmission(
         valid: false,
         reason: `Worker was ${Math.round(distance)}m away from the required location.`,
         requiresApproval: false,
+        agentDecision: null,
       }
     }
   }
 
+  const agentDecision: AgentDecision =
+    task.rewardAmount >= task.approvalThresholdAmount ? "requires_approval" : "auto_pay"
+
   return {
     valid: true,
-    reason: "Proof passed automated validation.",
-    requiresApproval: task.rewardAmount >= task.approvalThresholdAmount,
+    reason:
+      agentDecision === "requires_approval"
+        ? "Proof passed validation and the agent escalated payout for manual approval."
+        : "Proof passed validation and the agent approved automatic payout.",
+    requiresApproval: agentDecision === "requires_approval",
+    agentDecision,
   }
 }
 
@@ -435,6 +461,7 @@ export function submitTask(taskId: string, input: unknown) {
     valid: validationResult.valid,
     reason: validationResult.reason,
     requiresApproval: validationResult.requiresApproval,
+    agentDecision: validationResult.agentDecision,
     createdAt: timestamp,
   }
   getDemoStore().validations.push(validation)
@@ -448,11 +475,11 @@ export function submitTask(taskId: string, input: unknown) {
     return getTaskById(taskId)
   }
 
-  submission.status = validation.requiresApproval ? "valid" : "approved"
+  submission.status = validation.agentDecision === "requires_approval" ? "valid" : "approved"
   task.completedAt = timestamp
   task.updatedAt = timestamp
 
-  if (validation.requiresApproval) {
+  if (validation.agentDecision === "requires_approval") {
     task.status = "pending_approval"
     markPendingApproval(task)
     return getTaskById(taskId)

@@ -12,14 +12,17 @@
 - Current product surface includes:
   - `frontend/app/page.tsx`
   - `frontend/app/app/page.tsx`
+  - `frontend/app/work/page.tsx`
   - `frontend/app/api/**`
   - `frontend/lib/server/demo-store.ts`
   - `frontend/lib/server/task-service.ts`
 - Implemented app capabilities:
-  - landing page plus owner console under `/app`
+  - landing page plus owner dashboard under `/app`
+  - worker console under `/work`
   - Next.js route handlers for users, tasks, task detail, accept, submit, approve, and owner task list
   - server-side task lifecycle logic inside the Next.js app
-  - server actions for owner task creation and approval
+  - explicit post-validation agent decision (`auto_pay` vs `requires_approval`)
+  - server actions for owner task creation/approval and worker accept/submit flows
   - seeded demo store with open, accepted, pending approval, paid, and rejected tasks
 - The current demo store is in-memory and suited for demo flow, not durable production persistence.
 
@@ -58,12 +61,15 @@
 ## Missing Pieces
 - Shared types between apps.
 - Real auth/session model.
-- Real worker client integration against the new Next.js API routes.
 - Durable hosted persistence for Vercel deployment.
-- Real storage/payment/human-verification integrations.
+- Real `World`/`Hedera`/`Ledger` integrations.
+- Real worker client integration against the new Next.js API routes.
 - Automated tests beyond build verification.
 
 ## Current Recommendation
 - Keep API and UI together inside the Next.js app.
+- Use the web app as the end-to-end hackathon demo surface while mobile is developed separately.
 - Replace the demo in-memory store with a hosted database in a later pass.
+- Model `World` as the identity layer for both workers and human-backed agents, not just workers.
+- Defer `0G` entirely until the core product loop is complete and stable.
 - Keep mobile untouched during the rewrite.

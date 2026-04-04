@@ -198,6 +198,7 @@ function createSeedStore(): DemoStore {
       valid: true,
       reason: "Proof matched the request code and location requirement.",
       requiresApproval: true,
+      agentDecision: "requires_approval",
       createdAt: isoAfterHours(-6),
     },
     {
@@ -206,6 +207,7 @@ function createSeedStore(): DemoStore {
       valid: true,
       reason: "Proof met all automatic validation rules.",
       requiresApproval: false,
+      agentDecision: "auto_pay",
       createdAt: isoAfterHours(-22),
     },
     {
@@ -214,6 +216,7 @@ function createSeedStore(): DemoStore {
       valid: false,
       reason: "Request code mismatch.",
       requiresApproval: false,
+      agentDecision: null,
       createdAt: isoAfterHours(-9),
     },
   ]
