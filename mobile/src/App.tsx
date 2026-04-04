@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Login from './screens/Login'
 import RequestList from './screens/RequestList'
+import History, { saveToHistory, loadHistory } from './screens/History'
+import type { HistoryEntry } from './screens/History'
 import { MOCK_REQUESTS, GRADIENT } from './data/mock'
 import type { Request } from './data/mock'
 import { page, card, gradientBtn, ghostBtn } from './data/styles'
 
 type Screen = 'ready' | 'preview' | 'submitting' | 'success' | 'error'
-type View = 'list' | 'capture'
+type View = 'list' | 'capture' | 'history'
 
 interface Coords {
   lat: number
@@ -28,6 +30,7 @@ export default function App() {
   const [clock, setClock] = useState(new Date().toLocaleTimeString())
   const [err, setErr] = useState('')
   const [usingMock, setUsingMock] = useState(false)
+  const [historyCount, setHistoryCount] = useState(0)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -38,7 +41,12 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  // load requests - try backend, fallback to mock
+  // load history count for badge
+  useEffect(() => {
+    setHistoryCount(loadHistory().length)
+  }, [view])
+
+  // load requests on login
   useEffect(() => {
     if (!user) return
     fetch(`${BACKEND}/api/requests`)
@@ -73,56 +81,50 @@ export default function App() {
     )
   }, [])
 
-  // start cam + gps when entering capture view
   useEffect(() => {
-    if (view === 'capture' && screen === 'ready') {
-      startCam()
-      getGps()
-    }
+    if (view === 'capture' && screen === 'ready') { startCam(); getGps() }
     return () => { if (view !== 'capture') stopCam() }
   }, [view, screen])
 
   const selectRequest = (r: Request) => {
-    setRequest(r)
-    setScreen('ready')
-    setPhoto(null)
-    setErr('')
-    setView('capture')
+    setRequest(r); setScreen('ready'); setPhoto(null); setErr(''); setView('capture')
   }
 
   const backToList = () => {
-    stopCam()
-    setView('list')
-    setScreen('ready')
-    setPhoto(null)
-    setErr('')
+    stopCam(); setView('list'); setScreen('ready'); setPhoto(null); setErr('')
   }
 
   const capture = () => {
     const v = videoRef.current
     const c = canvasRef.current
     if (!v || !c) return
-    c.width = v.videoWidth
-    c.height = v.videoHeight
+    c.width = v.videoWidth; c.height = v.videoHeight
     c.getContext('2d')!.drawImage(v, 0, 0)
     setPhoto(c.toDataURL('image/jpeg', 0.85))
     setTs(new Date().toISOString())
-    stopCam()
-    setScreen('preview')
+    stopCam(); setScreen('preview')
   }
 
-  const retake = () => {
-    setPhoto(null)
-    setErr('')
-    setScreen('ready')
-    startCam()
-    getGps()
-  }
+  const retake = () => { setPhoto(null); setErr(''); setScreen('ready'); startCam(); getGps() }
 
   const submit = async () => {
     if (!photo || !coords || !request) { setErr('Missing photo, GPS or request'); return }
     setScreen('submitting')
-    if (usingMock) { setTimeout(() => setScreen('success'), 1500); return }
+    if (usingMock) {
+      setTimeout(() => {
+        // save to history even in mock mode
+        saveToHistory({
+          requestId: request.requestId,
+          description: request.description ?? 'Verify location',
+          lat: coords.lat,
+          lng: coords.lng,
+          ts,
+          photo: photo!,
+        })
+        setScreen('success')
+      }, 1500)
+      return
+    }
     try {
       const res = await fetch(`${BACKEND}/api/verify`, {
         method: 'POST',
@@ -130,6 +132,15 @@ export default function App() {
         body: JSON.stringify({ requestId: request.requestId, photo, latitude: coords.lat, longitude: coords.lng, timestamp: ts }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
+      // save to history on real success too
+      saveToHistory({
+        requestId: request.requestId,
+        description: request.description ?? 'Verify location',
+        lat: coords.lat,
+        lng: coords.lng,
+        ts,
+        photo: photo!,
+      })
       setScreen('success')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Submission failed')
@@ -139,54 +150,55 @@ export default function App() {
 
   const signOut = () => { setUser(null); stopCam(); setView('list') }
 
-  const topBar = (
+  const topBar = (showHistory = true) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 0' }}>
       <div style={{ fontSize: '13px', color: '#555' }}>
         Signed in as <span style={{ color: '#f0f0f0' }}>{user}</span>
       </div>
-      <button onClick={signOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
-        Sign out
-      </button>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {showHistory && (
+          <button
+            onClick={() => { stopCam(); setView('history') }}
+            style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
+          >
+            History
+            {historyCount > 0 && (
+              <span style={{ position: 'absolute', top: '-6px', right: '-10px', background: '#E040B0', color: '#fff', borderRadius: '10px', fontSize: '10px', padding: '1px 5px', fontWeight: 500 }}>
+                {historyCount}
+              </span>
+            )}
+          </button>
+        )}
+        <button onClick={signOut} style={{ fontSize: '12px', color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}>
+          Sign out
+        </button>
+      </div>
     </div>
   )
 
-  // --- login ---
   if (!user) return <Login onLogin={setUser} />
 
-  // --- request list ---
-  if (view === 'list') return (
-    <RequestList
-      requests={requests}
-      onSelect={selectRequest}
-      user={user}
-      onSignOut={signOut}
-    />
+  if (view === 'history') return (
+    <History onBack={() => setView('list')} user={user!} onSignOut={signOut} />
   )
 
-  // --- capture: ready ---
+  if (view === 'list') return (
+    <RequestList requests={requests} onSelect={selectRequest} user={user!} onSignOut={signOut} onHistory={() => { stopCam(); setView('history') }} historyCount={historyCount} />
+  )
+
   if (screen === 'ready') return (
     <div style={page}>
-      {topBar}
+      {topBar()}
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <button onClick={backToList} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            ← back
-          </button>
-          {usingMock && (
-            <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>
-              demo mode
-            </div>
-          )}
+          <button onClick={backToList} style={{ fontSize: '12px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← back</button>
+          {usingMock && <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>demo mode</div>}
         </div>
         {request && (
           <>
             <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>{request.description}</div>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>
-              Deadline: {new Date(request.deadline).toLocaleString()}
-            </div>
-            {request.amount && (
-              <div style={{ fontSize: '12px', color: '#facc15', marginBottom: '6px' }}>Locked: {request.amount}</div>
-            )}
+            <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Deadline: {new Date(request.deadline).toLocaleString()}</div>
+            {request.amount && <div style={{ fontSize: '12px', color: '#facc15', marginBottom: '6px' }}>Locked: {request.amount}</div>}
           </>
         )}
         <div style={{ fontSize: '12px', color: coords ? '#E040B0' : '#facc15' }}>
@@ -194,32 +206,22 @@ export default function App() {
         </div>
         {err && <div style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>{err}</div>}
       </div>
-
       <div style={{ flex: 1, margin: '12px 16px', borderRadius: '12px', overflow: 'hidden', background: '#111', position: 'relative', minHeight: '300px' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.6)', borderRadius: '6px', padding: '4px 10px', fontSize: '13px', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
-          {clock}
-        </div>
+        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.6)', borderRadius: '6px', padding: '4px 10px', fontSize: '13px', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{clock}</div>
       </div>
-
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-
       <div style={{ padding: '12px 16px 40px' }}>
-        <button
-          style={coords && request ? gradientBtn : { ...ghostBtn, color: '#555' }}
-          onClick={capture}
-          disabled={!coords || !request}
-        >
+        <button style={coords && request ? gradientBtn : { ...ghostBtn, color: '#555' }} onClick={capture} disabled={!coords || !request}>
           {!coords ? 'Waiting for GPS...' : 'Capture proof'}
         </button>
       </div>
     </div>
   )
 
-  // --- capture: preview ---
   if (screen === 'preview') return (
     <div style={page}>
-      {topBar}
+      {topBar(false)}
       <div style={{ margin: '12px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
         {photo && <img src={photo} alt="proof" style={{ width: '100%', display: 'block' }} />}
       </div>
@@ -244,24 +246,18 @@ export default function App() {
     </div>
   )
 
-  // --- submitting ---
   if (screen === 'submitting') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', border: '2.5px solid #E040B0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <div style={{ fontSize: '15px', color: '#888' }}>
-        {usingMock ? 'Simulating submission...' : 'Submitting proof on-chain...'}
-      </div>
+      <div style={{ fontSize: '15px', color: '#888' }}>{usingMock ? 'Simulating submission...' : 'Submitting proof on-chain...'}</div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 
-  // --- success ---
   if (screen === 'success') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
       </div>
       <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>Proof submitted</div>
       <div style={{ fontSize: '14px', color: '#666', textAlign: 'center', marginBottom: '32px', lineHeight: 1.6 }}>
@@ -279,11 +275,13 @@ export default function App() {
           </div>
         ))}
       </div>
-      <button style={{ ...ghostBtn, marginTop: '20px' }} onClick={backToList}>Back to requests</button>
+      <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '20px' }}>
+        <button style={{ ...ghostBtn, flex: 1 }} onClick={() => { setView('history') }}>View history</button>
+        <button style={{ ...ghostBtn, flex: 1 }} onClick={backToList}>Back to list</button>
+      </div>
     </div>
   )
 
-  // --- error ---
   if (screen === 'error') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ fontSize: '18px', fontWeight: 500, color: '#f87171', marginBottom: '10px' }}>Something went wrong</div>
