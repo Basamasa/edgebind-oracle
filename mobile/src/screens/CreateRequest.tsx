@@ -42,13 +42,14 @@ export default function CreateRequest({ onBack, onCreated, user, onSignOut }: Pr
     if (isNaN(Number(hours)) || Number(hours) <= 0) { setErr('Deadline must be at least 1 hour'); return }
 
     const newRequest: Request = {
-      requestId: '0xlocal_' + Date.now(),
+      taskId: 'task_local_' + Date.now(),
       description: description.trim(),
       lat: Number(lat),
       lng: Number(lng),
       radius: Number(radius),
       deadline: new Date(Date.now() + Number(hours) * 3600000).toISOString(),
-      amount: amount ? `${amount} ETH` : undefined,
+      amount: amount ? `${amount} ETH` : '0 ETH',
+      requestCode: `LOCAL-${Date.now()}`,
     }
 
     // in real flow this would POST to backend/contract

@@ -34,32 +34,32 @@ export default function About({ user, onSignOut }: Props) {
         </div>
         <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '6px' }}>EdgeBind</div>
         <div style={{ fontSize: '13px', color: '#555', lineHeight: 1.6 }}>
-          Decentralized physical oracle
+          Verified worker app
         </div>
       </div>
 
       {section(
         'What is EdgeBind?',
-        'EdgeBind connects smart contracts and AI agents to the real world. When a contract needs to verify that something happened physically (for example in a delivery, a location visit, an event), EdgeBind provides cryptographic proof through nearby human devices.'
+        'EdgeBind connects AI agents to verified human execution. This app is the worker surface: accept a task, capture proof, and submit evidence back to the runtime.'
       )}
 
       {section(
         'How does it work?',
-        '1. A requester locks funds in a smart contract with a location, radius, and deadline.\n2. A verifier opens this app, goes to the location, and captures a photo.\n3. The photo, GPS coordinates, and timestamp are sent on-chain as immutable proof.\n4. If the conditions are met, the funds are released automatically.'
+        '1. A verified owner or agent creates a task in the runtime.\n2. A verified human worker accepts it here.\n3. The worker submits photo and location proof.\n4. The backend validates proof and routes payout automatically or to manual approval.'
       )}
 
       {section(
-        'Why on-chain?',
-        'Once proof is submitted, nobody can change or delete it. The smart contract verifies the conditions and executes automatically: no human in the loop, no possibility of fraud.'
+        'What does this app do?',
+        'It is not a marketplace. It is a worker console for execution: see open tasks, accept one, capture proof, and send it to the shared runtime.'
       )}
 
       {section(
-        'Built at ETHGlobal Cannes 2026',
-        'EdgeBind was built with love and coffee by a 4-person team at ETHGlobal Cannes 2026. It uses World ID for human verification, 0G for decentralized photo storage, and Arc for smart contract deployment.'
+        'Trust model',
+        'Workers are verified humans. Owners are moving to World-backed identity. Low-risk payouts auto-release after validation. High-risk payouts escalate to Ledger for approval.'
       )}
 
       <div style={{ textAlign: 'center', padding: '24px 16px', fontSize: '11px', color: '#333' }}>
-        ETHGlobal Cannes 2026 - v0.1.0
+        EdgeBind worker runtime - v0.1.0
       </div>
 
     </div>

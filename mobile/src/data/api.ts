@@ -1,0 +1,107 @@
+import type { TaskRecord, WorkerSession, WorkerSummary } from './types'
+
+function authHeaders(token?: string) {
+  const headers = new Headers()
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  return headers
+}
+
+export async function fetchWorkers(baseUrl: string) {
+  const response = await fetch(`${baseUrl}/api/users?role=worker`)
+  const payload = (await response.json()) as WorkerSummary[] | { error?: string }
+
+  if (!response.ok || !Array.isArray(payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to load worker accounts')
+  }
+
+  return payload.filter((worker) => worker.isHumanVerified)
+}
+
+export async function signInWorker(baseUrl: string, userId: string) {
+  const response = await fetch(`${baseUrl}/api/auth/mobile/worker`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId }),
+  })
+  const payload = (await response.json()) as WorkerSession | { error?: string }
+
+  if (!response.ok || !('token' in payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Worker sign-in failed')
+  }
+
+  return payload
+}
+
+export async function fetchOpenTasks(baseUrl: string) {
+  const response = await fetch(`${baseUrl}/api/tasks?status=open`)
+  const payload = (await response.json()) as TaskRecord[] | { error?: string }
+
+  if (!response.ok || !Array.isArray(payload)) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to load tasks')
+  }
+
+  return payload
+}
+
+export async function acceptTask(baseUrl: string, token: string, taskId: string) {
+  const response = await fetch(`${baseUrl}/api/tasks/${taskId}/accept`, {
+    method: 'POST',
+    headers: (() => {
+      const headers = authHeaders(token)
+      headers.set('Content-Type', 'application/json')
+      return headers
+    })(),
+    body: JSON.stringify({}),
+  })
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to accept task')
+  }
+
+  return payload as TaskRecord
+}
+
+export async function submitTaskProof(
+  baseUrl: string,
+  token: string,
+  taskId: string,
+  body: {
+    requestCode: string
+    imageDataUrl: string
+    latitude: number
+    longitude: number
+    accuracyMeters?: number
+  },
+) {
+  const response = await fetch(`${baseUrl}/api/tasks/${taskId}/submissions`, {
+    method: 'POST',
+    headers: (() => {
+      const headers = authHeaders(token)
+      headers.set('Content-Type', 'application/json')
+      return headers
+    })(),
+    body: JSON.stringify({
+      requestCode: body.requestCode,
+      imageDataUrl: body.imageDataUrl,
+      location: {
+        latitude: body.latitude,
+        longitude: body.longitude,
+        accuracyMeters: body.accuracyMeters,
+      },
+    }),
+  })
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error((payload as { error?: string }).error ?? 'Failed to submit proof')
+  }
+
+  return payload as TaskRecord
+}

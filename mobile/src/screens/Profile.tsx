@@ -71,8 +71,8 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
           <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Proofs submitted</div>
         </div>
         <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', fontWeight: 500, color: '#facc15', marginBottom: '4px' }}>{(history.length * 0.01).toFixed(2)}</div>
-          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ETH earned</div>
+          <div style={{ fontSize: '28px', fontWeight: 500, color: '#facc15', marginBottom: '4px' }}>{history.length}</div>
+          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tasks completed</div>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
         <div style={{ fontSize: '12px', color: '#444', marginBottom: '14px', lineHeight: 1.6 }}>
           {mode === 'demo'
             ? 'Uses mock requests and simulates submissions. No backend needed — safe for testing and presentations.'
-            : 'Connects to the real backend, validates GPS on-chain, and releases escrow on verified proof.'}
+            : 'Connects to the live task runtime, signs in as a verified worker, accepts open tasks, submits proof, and reflects payout state.'}
         </div>
 
         {/* backend URL — only shown in live mode */}
@@ -122,7 +122,7 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
               type="text"
               value={backendUrl}
               onChange={e => { setBackendUrl(e.target.value); setPingResult(null) }}
-              placeholder="https://your-backend.onrender.com"
+              placeholder="https://frontend-wheat-one-84.vercel.app"
             />
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button
@@ -157,8 +157,8 @@ export default function Profile({ user, onSignOut, onModeChange }: Props) {
         {[
           { label: 'Username', value: mockUser?.username ?? user.toLowerCase() },
           { label: 'Display name', value: user },
-          { label: 'Role', value: 'Verifier' },
-          { label: 'Network', value: 'Arc Testnet' },
+          { label: 'Role', value: 'Verified worker' },
+          { label: 'Runtime', value: mode === 'demo' ? 'Mock' : 'Live task API' },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1e1e1e' }}>
             <span style={{ fontSize: '13px', color: '#555' }}>{label}</span>

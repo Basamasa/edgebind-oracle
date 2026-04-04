@@ -11,7 +11,7 @@ const KEY = 'edgebind_settings'
 
 export const DEFAULT_SETTINGS: Settings = {
   mode: 'demo',
-  backendUrl: import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000',
+  backendUrl: 'https://frontend-wheat-one-84.vercel.app',
 }
 
 export const loadSettings = (): Settings => {

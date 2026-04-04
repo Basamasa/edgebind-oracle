@@ -1,7 +1,7 @@
 import React from "react"
 import { GRADIENT } from '../data/mock'
 
-type Tab = 'list' | 'history' | 'create' | 'about' | 'profile'
+type Tab = 'list' | 'history' | 'about' | 'profile'
 
 interface Props {
   active: Tab
@@ -12,7 +12,7 @@ interface Props {
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   {
     id: 'list',
-    label: 'Requests',
+    label: 'Tasks',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <rect x="3" y="5" width="18" height="4" rx="1"/><rect x="3" y="11" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/>
@@ -25,15 +25,6 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'create',
-    label: 'New',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
       </svg>
     ),
   },

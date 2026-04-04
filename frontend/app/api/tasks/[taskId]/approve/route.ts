@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { corsPreflight, withCors } from "@/lib/server/cors"
 import { toErrorResponse } from "@/lib/server/errors"
-import { requireVerifiedOwnerSession } from "@/lib/server/session"
+import { requireVerifiedOwnerRequest } from "@/lib/server/session"
 import { approveTask } from "@/lib/server/task-service"
+
+export async function OPTIONS(request: NextRequest) {
+  return corsPreflight(request)
+}
 
 export async function POST(
   request: NextRequest,
@@ -10,16 +15,19 @@ export async function POST(
 ) {
   try {
     const { taskId } = await context.params
-    const approver = await requireVerifiedOwnerSession()
+    const approver = requireVerifiedOwnerRequest(request)
     const payload = await request.json().catch(() => ({}))
 
-    return NextResponse.json(
-      await approveTask(taskId, {
-        ...payload,
-        approverId: approver.id,
-      }),
+    return withCors(
+      request,
+      NextResponse.json(
+        await approveTask(taskId, {
+          ...payload,
+          approverId: approver.id,
+        }),
+      ),
     )
   } catch (error) {
-    return toErrorResponse(error)
+    return withCors(request, toErrorResponse(error))
   }
 }

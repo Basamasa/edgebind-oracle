@@ -8,11 +8,10 @@ interface Props {
   user: string
   onSignOut: () => void
   onHistory: () => void
-  onCreate: () => void
   historyCount: number
 }
 
-export default function RequestList({ requests, onSelect, user, onSignOut, onHistory, historyCount, onCreate }: Props) {
+export default function RequestList({ requests, onSelect, user, onSignOut, onHistory, historyCount }: Props) {
 
   const timeLeft = (deadline: string) => {
     const diff = new Date(deadline).getTime() - Date.now()
@@ -54,11 +53,13 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
       {/* header */}
       <div style={{ padding: '20px 16px 8px' }}>
         <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-          Open requests
+          Open tasks
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '22px', fontWeight: 500 }}>{requests.length} active</div>
-          <button onClick={onCreate} style={{ fontSize: '13px', background: 'none', border: '0.5px solid #333', borderRadius: '8px', padding: '7px 14px', color: '#f0f0f0', cursor: 'pointer' }}>+ New</button>
+          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            worker app
+          </div>
         </div>
       </div>
 
@@ -66,30 +67,28 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '40px' }}>
         {requests.length === 0 && (
           <div style={{ textAlign: 'center', color: '#444', fontSize: '14px', marginTop: '60px' }}>
-            No open requests right now
+            No open tasks right now
           </div>
         )}
         {requests.map(r => {
           const expired = isExpired(r.deadline)
           return (
             <div
-              key={r.requestId}
+              key={r.taskId}
               style={{ ...card, opacity: expired ? 0.4 : 1, cursor: expired ? 'not-allowed' : 'pointer' }}
               onClick={() => !expired && onSelect(r)}
             >
               <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '8px', lineHeight: 1.4 }}>
-                {r.description ?? `Verify location within ${r.radius}m`}
+                {r.description}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#888' }}>
                     {r.radius}m radius
                   </span>
-                  {r.amount && (
-                    <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#facc15' }}>
-                      {r.amount}
-                    </span>
-                  )}
+                  <span style={{ fontSize: '11px', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: '4px', padding: '2px 7px', color: '#facc15' }}>
+                    {r.amount}
+                  </span>
                 </div>
                 <span style={{ fontSize: '12px', color: expired ? '#f87171' : '#E040B0' }}>
                   {timeLeft(r.deadline)}
@@ -98,6 +97,9 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
               <div style={{ fontSize: '11px', color: '#444', marginTop: '6px' }}>
                 Due: {new Date(r.deadline).toLocaleString()}
               </div>
+              <div style={{ fontSize: '11px', color: '#333', marginTop: '6px', fontFamily: 'monospace' }}>
+                {r.requestCode}
+              </div>
             </div>
           )
         })}
@@ -105,7 +107,7 @@ export default function RequestList({ requests, onSelect, user, onSignOut, onHis
 
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, #0a0a0a)' }}>
         <div style={{ fontSize: '12px', color: '#333', textAlign: 'center' }}>
-          Tap a request to start capturing proof
+          Tap a task to accept it and start capturing proof
         </div>
       </div>
 

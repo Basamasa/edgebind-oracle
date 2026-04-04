@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 
 import { cookies } from "next/headers"
+import { NextRequest } from "next/server"
 
 import type { UserRole, UserSummary } from "@/lib/domain"
 import { AppError } from "@/lib/server/errors"
@@ -62,9 +63,33 @@ function parseToken(token: string | undefined) {
   return decode(encodedPayload)
 }
 
+function bearerToken(request: NextRequest) {
+  const header = request.headers.get("authorization")?.trim()
+
+  if (!header?.toLowerCase().startsWith("bearer ")) {
+    return undefined
+  }
+
+  return header.slice(7).trim() || undefined
+}
+
 export async function getSessionUser() {
   const cookieStore = await cookies()
   return parseToken(cookieStore.get(SESSION_COOKIE_NAME)?.value)
+}
+
+export function createSessionToken(user: UserSummary) {
+  const payload: SessionPayload = {
+    ...user,
+    issuedAt: Date.now(),
+  }
+  const encodedPayload = encode(payload)
+  return `${encodedPayload}.${sign(encodedPayload)}`
+}
+
+export function getRequestSessionUser(request: NextRequest) {
+  const cookieToken = request.cookies.get(SESSION_COOKIE_NAME)?.value
+  return parseToken(bearerToken(request) ?? cookieToken)
 }
 
 export async function requireSessionUser() {
@@ -87,8 +112,32 @@ export async function requireSessionRole(roles: UserRole[]) {
   return user
 }
 
+export function requireRequestSessionRole(request: NextRequest, roles: UserRole[]) {
+  const user = getRequestSessionUser(request)
+
+  if (!user) {
+    throw new AppError(401, "You must sign in to continue")
+  }
+
+  if (!roles.includes(user.role)) {
+    throw new AppError(403, "Your session does not have access to this action")
+  }
+
+  return user
+}
+
 export async function requireVerifiedWorkerSession() {
   const user = await requireSessionRole(["worker"])
+
+  if (!user.isHumanVerified) {
+    throw new AppError(403, "Only verified humans can perform this action")
+  }
+
+  return user
+}
+
+export function requireVerifiedWorkerRequest(request: NextRequest) {
+  const user = requireRequestSessionRole(request, ["worker"])
 
   if (!user.isHumanVerified) {
     throw new AppError(403, "Only verified humans can perform this action")
@@ -107,14 +156,19 @@ export async function requireVerifiedOwnerSession() {
   return user
 }
 
+export function requireVerifiedOwnerRequest(request: NextRequest) {
+  const user = requireRequestSessionRole(request, ["owner", "admin"])
+
+  if (!user.isHumanVerified) {
+    throw new AppError(403, "World verification is required before creating or approving tasks")
+  }
+
+  return user
+}
+
 export async function setSession(user: UserSummary) {
   const cookieStore = await cookies()
-  const payload: SessionPayload = {
-    ...user,
-    issuedAt: Date.now(),
-  }
-  const encodedPayload = encode(payload)
-  const token = `${encodedPayload}.${sign(encodedPayload)}`
+  const token = createSessionToken(user)
 
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,

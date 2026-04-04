@@ -1,22 +1,65 @@
-import { useState } from 'react'
-import { MOCK_USERS, GRADIENT } from '../data/mock'
+import { useEffect, useState } from 'react'
+import { GRADIENT } from '../data/mock'
 import { page, gradientBtn } from '../data/styles'
+import { fetchWorkers, signInWorker } from '../data/api'
+import { loadSettings } from '../data/settings'
+import type { WorkerSession, WorkerSummary } from '../data/types'
 
 interface Props {
-  onLogin: (display: string) => void
+  onLogin: (session: WorkerSession) => void
 }
 
 export default function Login({ onLogin }: Props) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [workers, setWorkers] = useState<WorkerSummary[]>([])
+  const [selectedId, setSelectedId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [signingIn, setSigningIn] = useState(false)
   const [err, setErr] = useState('')
+  const settings = loadSettings()
 
-  const submit = () => {
-    const user = MOCK_USERS.find(
-      u => u.username === username.trim().toLowerCase() && u.password === password
-    )
-    if (!user) { setErr('Wrong username or password'); return }
-    onLogin(user.display)
+  useEffect(() => {
+    if (settings.mode === 'demo') {
+      const demoWorkers: WorkerSummary[] = [
+        { id: 'worker-lina', name: 'Lina Verified', role: 'worker', isHumanVerified: true },
+        { id: 'worker-marcus', name: 'Marcus Runner', role: 'worker', isHumanVerified: true },
+      ]
+      setWorkers(demoWorkers)
+      setSelectedId(demoWorkers[0]?.id ?? '')
+      setLoading(false)
+      return
+    }
+
+    fetchWorkers(settings.backendUrl)
+      .then((result) => {
+        setWorkers(result)
+        setSelectedId(result[0]?.id ?? '')
+      })
+      .catch((error) => setErr(error instanceof Error ? error.message : 'Failed to load workers'))
+      .finally(() => setLoading(false))
+  }, [settings.backendUrl, settings.mode])
+
+  const submit = async () => {
+    const worker = workers.find((entry) => entry.id === selectedId)
+
+    if (!worker) {
+      setErr('Select a verified worker')
+      return
+    }
+
+    if (settings.mode === 'demo') {
+      onLogin({ ok: true, token: 'demo-worker-token', user: worker })
+      return
+    }
+
+    try {
+      setSigningIn(true)
+      setErr('')
+      onLogin(await signInWorker(settings.backendUrl, worker.id))
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Worker sign-in failed')
+    } finally {
+      setSigningIn(false)
+    }
   }
 
   const input: React.CSSProperties = {
@@ -34,8 +77,6 @@ export default function Login({ onLogin }: Props) {
 
   return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-
-      {/* logo with gradient ring */}
       <div style={{ position: 'relative', marginBottom: '24px' }}>
         <div style={{ width: '96px', height: '96px', borderRadius: '24px', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src="/icon-512.png" alt="EdgeBind" style={{ width: '80px', height: '80px', borderRadius: '18px' }} />
@@ -44,50 +85,44 @@ export default function Login({ onLogin }: Props) {
 
       <div style={{ fontSize: '24px', fontWeight: 500, marginBottom: '4px' }}>EdgeBind</div>
       <div style={{ fontSize: '14px', color: '#444', marginBottom: '40px', textAlign: 'center' }}>
-        Real-world proof, on-chain
+        Verified worker console
       </div>
 
       <div style={{ width: '100%', maxWidth: '360px' }}>
-        <input
+        <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          Verified worker
+        </div>
+        <select
           style={input}
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => { setUsername(e.target.value); setErr('') }}
-          autoCapitalize="none"
-          autoCorrect="off"
-        />
-        <input
-          style={input}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => { setPassword(e.target.value); setErr('') }}
-          onKeyDown={e => e.key === 'Enter' && submit()}
-        />
+          value={selectedId}
+          onChange={(e) => { setSelectedId(e.target.value); setErr('') }}
+          disabled={loading || signingIn}
+        >
+          {workers.map((worker) => (
+            <option key={worker.id} value={worker.id}>
+              {worker.name}
+            </option>
+          ))}
+        </select>
         {err && (
           <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', textAlign: 'center' }}>
             {err}
           </div>
         )}
-        <button style={gradientBtn} onClick={submit}>Sign in</button>
+        <button style={gradientBtn} onClick={submit} disabled={loading || signingIn}>
+          {loading ? 'Loading workers...' : signingIn ? 'Signing in...' : 'Continue'}
+        </button>
 
-        {/* demo credentials hint */}
         <div style={{ marginTop: '24px', background: '#0f0f0f', border: '0.5px solid #1e1e1e', borderRadius: '10px', padding: '14px 16px' }}>
           <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            Demo credentials
+            Runtime
           </div>
-          {MOCK_USERS.map(u => (
-            <div
-              key={u.username}
-              onClick={() => { setUsername(u.username); setPassword(u.password); setErr('') }}
-              style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}
-            >
-              <span style={{ color: '#888' }}>{u.username}</span>
-              <span style={{ color: '#444', fontFamily: 'monospace' }}>{u.password}</span>
-            </div>
-          ))}
-          <div style={{ fontSize: '11px', color: '#333', marginTop: '8px' }}>tap a row to autofill</div>
+          <div style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>
+            mode = {settings.mode}
+          </div>
+          <div style={{ fontSize: '12px', color: '#444', fontFamily: 'monospace', lineHeight: 1.6 }}>
+            {settings.backendUrl}
+          </div>
         </div>
       </div>
     </div>

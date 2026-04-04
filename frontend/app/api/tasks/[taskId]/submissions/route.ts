@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { corsPreflight, withCors } from "@/lib/server/cors"
 import { toErrorResponse } from "@/lib/server/errors"
-import { requireVerifiedWorkerSession } from "@/lib/server/session"
+import { requireVerifiedWorkerRequest } from "@/lib/server/session"
 import { submitTask } from "@/lib/server/task-service"
+
+export async function OPTIONS(request: NextRequest) {
+  return corsPreflight(request)
+}
 
 export async function POST(
   request: NextRequest,
@@ -10,16 +15,19 @@ export async function POST(
 ) {
   try {
     const { taskId } = await context.params
-    const worker = await requireVerifiedWorkerSession()
+    const worker = requireVerifiedWorkerRequest(request)
     const payload = await request.json()
 
-    return NextResponse.json(
-      await submitTask(taskId, {
-        ...payload,
-        workerId: worker.id,
-      }),
+    return withCors(
+      request,
+      NextResponse.json(
+        await submitTask(taskId, {
+          ...payload,
+          workerId: worker.id,
+        }),
+      ),
     )
   } catch (error) {
-    return toErrorResponse(error)
+    return withCors(request, toErrorResponse(error))
   }
 }
