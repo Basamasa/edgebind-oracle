@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MOCK_USERS, GRADIENT } from '../data/mock'
-import { page, card, gradientBtn } from '../data/styles'
+import { page, gradientBtn } from '../data/styles'
 
 interface Props {
   onLogin: (display: string) => void
@@ -12,21 +12,17 @@ export default function Login({ onLogin }: Props) {
   const [err, setErr] = useState('')
 
   const submit = () => {
-    // check against mock users - replace with real auth when ready
     const user = MOCK_USERS.find(
       u => u.username === username.trim().toLowerCase() && u.password === password
     )
-    if (!user) {
-      setErr('Wrong username or password')
-      return
-    }
+    if (!user) { setErr('Wrong username or password'); return }
     onLogin(user.display)
   }
 
   const input: React.CSSProperties = {
     width: '100%',
     background: '#1a1a1a',
-    border: '0.5px solid #333',
+    border: '0.5px solid #2a2a2a',
     borderRadius: '10px',
     padding: '14px 16px',
     fontSize: '16px',
@@ -39,18 +35,18 @@ export default function Login({ onLogin }: Props) {
   return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
 
-      {/* logo */}
-      <img
-        src="/icon-512.png"
-        alt="EdgeBind"
-        style={{ width: '80px', height: '80px', borderRadius: '20px', marginBottom: '16px' }}
-      />
-      <div style={{ fontSize: '22px', fontWeight: 500, marginBottom: '4px' }}>EdgeBind</div>
-      <div style={{ fontSize: '14px', color: '#555', marginBottom: '40px' }}>
+      {/* logo with gradient ring */}
+      <div style={{ position: 'relative', marginBottom: '24px' }}>
+        <div style={{ width: '96px', height: '96px', borderRadius: '24px', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src="/icon-512.png" alt="EdgeBind" style={{ width: '80px', height: '80px', borderRadius: '18px' }} />
+        </div>
+      </div>
+
+      <div style={{ fontSize: '24px', fontWeight: 500, marginBottom: '4px' }}>EdgeBind</div>
+      <div style={{ fontSize: '14px', color: '#444', marginBottom: '40px', textAlign: 'center' }}>
         Real-world proof, on-chain
       </div>
 
-      {/* form */}
       <div style={{ width: '100%', maxWidth: '360px' }}>
         <input
           style={input}
@@ -74,30 +70,26 @@ export default function Login({ onLogin }: Props) {
             {err}
           </div>
         )}
-        <button style={gradientBtn} onClick={submit}>
-          Sign in
-        </button>
+        <button style={gradientBtn} onClick={submit}>Sign in</button>
 
-        {/* hint for demo judges */}
-        <div style={{ marginTop: '24px', background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: '10px', padding: '12px 16px' }}>
-          <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+        {/* demo credentials hint */}
+        <div style={{ marginTop: '24px', background: '#0f0f0f', border: '0.5px solid #1e1e1e', borderRadius: '10px', padding: '14px 16px' }}>
+          <div style={{ fontSize: '11px', color: '#444', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
             Demo credentials
           </div>
           {MOCK_USERS.map(u => (
             <div
               key={u.username}
-              style={{ fontSize: '12px', color: '#888', padding: '3px 0', cursor: 'pointer' }}
               onClick={() => { setUsername(u.username); setPassword(u.password); setErr('') }}
+              style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '6px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}
             >
-              {u.username} / {u.password}
+              <span style={{ color: '#888' }}>{u.username}</span>
+              <span style={{ color: '#444', fontFamily: 'monospace' }}>{u.password}</span>
             </div>
           ))}
-          <div style={{ fontSize: '11px', color: '#444', marginTop: '6px' }}>
-            tap a row to autofill
-          </div>
+          <div style={{ fontSize: '11px', color: '#333', marginTop: '8px' }}>tap a row to autofill</div>
         </div>
       </div>
-
     </div>
   )
 }

@@ -44,7 +44,7 @@ export default function App() {
 
   // load history count for badge
   useEffect(() => {
-    setHistoryCount(loadHistory().length)
+    setHistoryCount(loadHistory(user ?? '').length)
   }, [view])
 
   // load requests on login
@@ -114,7 +114,7 @@ export default function App() {
     if (usingMock) {
       setTimeout(() => {
         // save to history even in mock mode
-        saveToHistory({
+        saveToHistory(user ?? "", {
           requestId: request.requestId,
           description: request.description ?? 'Verify location',
           lat: coords.lat,
@@ -134,7 +134,7 @@ export default function App() {
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       // save to history on real success too
-      saveToHistory({
+      saveToHistory(user ?? "", {
         requestId: request.requestId,
         description: request.description ?? 'Verify location',
         lat: coords.lat,
