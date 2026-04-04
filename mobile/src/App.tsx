@@ -15,9 +15,35 @@ interface Request {
   radius: number
   deadline: string
   amount?: string
+  description?: string
 }
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000'
+
+// brand gradient from the logo
+const GRADIENT = 'linear-gradient(135deg, #E040B0 0%, #F97316 60%, #FACC15 100%)'
+
+// mock requests - remove when backend is ready
+const MOCK_REQUESTS: Request[] = [
+  {
+    requestId: '0xmock001',
+    lat: 43.5514,
+    lng: 7.0128,
+    radius: 100,
+    deadline: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    amount: '0.1 ETH',
+    description: 'Take a picture of the Palais des Festivals in Cannes',
+  },
+  {
+    requestId: '0xmock002',
+    lat: 43.5528,
+    lng: 7.0170,
+    radius: 50,
+    deadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+    amount: '0.05 ETH',
+    description: 'Deliver a parcel in front of the main entrance',
+  },
+]
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('ready')
@@ -27,21 +53,31 @@ export default function App() {
   const [ts, setTs] = useState('')
   const [clock, setClock] = useState(new Date().toLocaleTimeString())
   const [err, setErr] = useState('')
+  const [usingMock, setUsingMock] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
+  // live clock
   useEffect(() => {
     const t = setInterval(() => setClock(new Date().toLocaleTimeString()), 1000)
     return () => clearInterval(t)
   }, [])
 
+  // try backend, fallback to mock if it fails
   useEffect(() => {
     fetch(`${BACKEND}/api/request/active`)
       .then(r => r.json())
-      .then(setRequest)
-      .catch(() => setErr('Could not load request — is the backend running?'))
+      .then(data => {
+        setRequest(data)
+        setUsingMock(false)
+      })
+      .catch(() => {
+        // backend not ready yet, use mock so we can still demo
+        setRequest(MOCK_REQUESTS[0])
+        setUsingMock(true)
+      })
   }, [])
 
   const startCam = useCallback(async () => {
@@ -103,6 +139,13 @@ export default function App() {
       return
     }
     setScreen('submitting')
+
+    // mock mode — fake a successful submission
+    if (usingMock) {
+      setTimeout(() => setScreen('success'), 1500)
+      return
+    }
+
     try {
       const res = await fetch(`${BACKEND}/api/verify`, {
         method: 'POST',
@@ -123,6 +166,7 @@ export default function App() {
     }
   }
 
+  // shared styles
   const page: React.CSSProperties = {
     minHeight: '100dvh',
     display: 'flex',
@@ -138,23 +182,51 @@ export default function App() {
     padding: '12px 16px',
     margin: '12px 16px 0',
   }
-  const btn = (bg: string, fg = '#fff'): React.CSSProperties => ({
-    background: bg, color: fg,
-    border: 'none', borderRadius: '12px',
-    padding: '16px', fontSize: '16px', fontWeight: 500,
-    cursor: 'pointer', width: '100%',
-  })
 
+  // gradient button - used for main actions
+  const gradientBtn: React.CSSProperties = {
+    background: GRADIENT,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '16px',
+    fontSize: '16px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    width: '100%',
+  }
+
+  // secondary button - used for retake, back, etc
+  const ghostBtn: React.CSSProperties = {
+    background: '#141414',
+    color: '#f0f0f0',
+    border: '0.5px solid #333',
+    borderRadius: '12px',
+    padding: '16px',
+    fontSize: '16px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    width: '100%',
+  }
+
+  // --- screen: ready ---
   if (screen === 'ready') return (
     <div style={page}>
       <div style={card}>
-        <div style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
-          Active request
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Active request
+          </div>
+          {usingMock && (
+            <div style={{ fontSize: '10px', color: '#854F0B', background: '#FAEEDA', padding: '2px 6px', borderRadius: '4px' }}>
+              demo mode
+            </div>
+          )}
         </div>
         {request ? (
           <>
             <div style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>
-              Prove location within {request.radius}m
+              {request.description ?? `Prove location within ${request.radius}m`}
             </div>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>
               Deadline: {new Date(request.deadline).toLocaleString()}
@@ -167,10 +239,10 @@ export default function App() {
           </>
         ) : (
           <div style={{ fontSize: '14px', color: '#555', marginBottom: '6px' }}>
-            {err || 'Loading request...'}
+            Loading request...
           </div>
         )}
-        <div style={{ fontSize: '12px', color: coords ? '#4ade80' : '#facc15' }}>
+        <div style={{ fontSize: '12px', color: coords ? '#E040B0' : '#facc15' }}>
           {coords ? `GPS ready — ${Math.round(coords.accuracy)}m accuracy` : 'Acquiring GPS...'}
         </div>
         {err && request && (
@@ -195,10 +267,7 @@ export default function App() {
 
       <div style={{ padding: '12px 16px 40px' }}>
         <button
-          style={{
-            ...btn(coords && request ? '#4ade80' : '#1a1a1a', coords && request ? '#0a0a0a' : '#555'),
-            border: coords && request ? 'none' : '0.5px solid #333',
-          }}
+          style={coords && request ? gradientBtn : { ...ghostBtn, color: '#555' }}
           onClick={capture}
           disabled={!coords || !request}
         >
@@ -208,6 +277,7 @@ export default function App() {
     </div>
   )
 
+  // --- screen: preview ---
   if (screen === 'preview') return (
     <div style={page}>
       <div style={{ margin: '12px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
@@ -228,30 +298,34 @@ export default function App() {
         ))}
       </div>
       <div style={{ padding: '12px 16px 40px', display: 'flex', gap: '10px' }}>
-        <button style={{ ...btn('#141414'), border: '0.5px solid #333', flex: 1 }} onClick={retake}>Retake</button>
-        <button style={{ ...btn('#4ade80', '#0a0a0a'), flex: 2 }} onClick={submit}>Submit proof</button>
+        <button style={{ ...ghostBtn, flex: 1 }} onClick={retake}>Retake</button>
+        <button style={{ ...gradientBtn, flex: 2 }} onClick={submit}>Submit proof</button>
       </div>
     </div>
   )
 
+  // --- screen: submitting ---
   if (screen === 'submitting') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-      <div style={{ width: '40px', height: '40px', border: '2.5px solid #4ade80', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <div style={{ fontSize: '15px', color: '#888' }}>Submitting proof on-chain...</div>
+      <div style={{ width: '40px', height: '40px', border: '2.5px solid #E040B0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ fontSize: '15px', color: '#888' }}>
+        {usingMock ? 'Simulating submission...' : 'Submitting proof on-chain...'}
+      </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 
+  // --- screen: success ---
   if (screen === 'success') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#052e16', border: '2px solid #4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       </div>
       <div style={{ fontSize: '20px', fontWeight: 500, marginBottom: '8px' }}>Proof submitted</div>
       <div style={{ fontSize: '14px', color: '#666', textAlign: 'center', marginBottom: '32px', lineHeight: 1.6 }}>
-        Attestation has been sent.<br />The dashboard will update shortly.
+        {usingMock ? 'Demo mode — no real transaction.' : 'Attestation sent. Dashboard will update shortly.'}
       </div>
       <div style={{ width: '100%', ...card, margin: 0 }}>
         {[
@@ -265,14 +339,18 @@ export default function App() {
           </div>
         ))}
       </div>
+      <button style={{ ...ghostBtn, marginTop: '20px' }} onClick={retake}>
+        Back to requests
+      </button>
     </div>
   )
 
+  // --- screen: error ---
   if (screen === 'error') return (
     <div style={{ ...page, alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ fontSize: '18px', fontWeight: 500, color: '#f87171', marginBottom: '10px' }}>Something went wrong</div>
       <div style={{ fontSize: '13px', color: '#666', textAlign: 'center', marginBottom: '32px', fontFamily: 'monospace', lineHeight: 1.6 }}>{err}</div>
-      <button style={{ ...btn('#141414'), border: '0.5px solid #444' }} onClick={retake}>Try again</button>
+      <button style={ghostBtn} onClick={retake}>Try again</button>
     </div>
   )
 
