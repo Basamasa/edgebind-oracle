@@ -6,289 +6,288 @@
     <title>Edgebind Oracle Architecture</title>
     <style>
       :root {
-        --paper: #f4efe6;
-        --ink: #161616;
-        --muted: #5f574d;
-        --line: rgba(22, 22, 22, 0.16);
-        --owner: #b35a2d;
-        --runtime: #0b6b70;
-        --worker: #2f5b3a;
-        --world: #8c6721;
-        --ledger: #7d3340;
-        --hedera: #0c8264;
+        --paper: #faf8f5;
+        --ink: #1a1a1a;
+        --muted: #8a8278;
+        --line: rgba(22, 22, 22, 0.1);
+        --owner: #c4613a;
+        --runtime: #0e7e84;
+        --worker: #3a7248;
+        --world: #a07828;
+        --ledger: #943b4a;
+        --hedera: #0e9974;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; margin: 0; }
 
       body {
-        margin: 0;
         color: var(--ink);
-        background:
-          radial-gradient(circle at top left, rgba(179, 90, 45, 0.08), transparent 26%),
-          radial-gradient(circle at top right, rgba(11, 107, 112, 0.08), transparent 24%),
-          linear-gradient(rgba(22, 22, 22, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(22, 22, 22, 0.04) 1px, transparent 1px),
-          var(--paper);
-        background-size: auto, auto, 28px 28px, 28px 28px, auto;
-        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+        background: var(--paper);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
 
       main {
-        max-width: 1320px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 28px 18px 48px;
+        padding: 32px 24px 56px;
       }
 
-      h1,
-      h2,
-      p {
-        margin: 0;
-      }
-
-      .eyebrow,
-      .legend span,
-      .note {
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-      }
-
-      .eyebrow {
-        color: var(--muted);
-        font-size: 11px;
-        margin-bottom: 12px;
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        margin-bottom: 24px;
       }
 
       h1 {
-        font-size: clamp(2.4rem, 5vw, 4.6rem);
-        line-height: 0.94;
-        max-width: 9ch;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
       }
 
-      .intro {
-        max-width: 68ch;
-        margin-top: 12px;
+      .tag {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
         color: var(--muted);
-        font-size: 15px;
-        line-height: 1.7;
+        background: rgba(0,0,0,0.04);
+        padding: 3px 10px;
+        border-radius: 99px;
       }
 
       .panel {
-        margin-top: 22px;
         border: 1px solid var(--line);
-        border-radius: 28px;
-        padding: 16px;
-        background: rgba(255, 251, 245, 0.8);
-        box-shadow: 0 24px 56px rgba(35, 26, 15, 0.08);
+        border-radius: 20px;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.03);
       }
 
-      svg {
-        display: block;
-        width: 100%;
-        height: auto;
-      }
+      svg { display: block; width: 100%; height: auto; }
 
       .legend {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 14px;
+        gap: 16px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
       }
 
       .legend span {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        font-size: 10px;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 500;
         color: var(--muted);
       }
 
       .swatch {
-        width: 12px;
-        height: 12px;
-        border-radius: 999px;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
       }
 
-      .mini-panel {
-        margin-top: 18px;
+      .lifecycle {
+        margin-top: 20px;
         border: 1px solid var(--line);
-        border-radius: 24px;
-        padding: 14px;
-        background: rgba(255, 251, 245, 0.76);
+        border-radius: 16px;
+        padding: 16px 20px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       }
 
-      .mini-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 12px;
-        margin-bottom: 10px;
-      }
-
-      h2 {
-        font-size: 1.45rem;
-      }
-
-      .note {
+      .lifecycle h2 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 12px;
         color: var(--muted);
-        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
       .footer {
-        margin-top: 14px;
+        margin-top: 10px;
         color: var(--muted);
-        font-size: 13px;
-        line-height: 1.6;
+        font-size: 12px;
+        line-height: 1.5;
       }
     </style>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Edgebind Oracle / Final Target Architecture</p>
-      <h1>Graph-first system view.</h1>
-      <p class="intro">
-        `frontend` is the owner web app plus the shared Next.js runtime. `mobile` is the worker app. `World`
-        verifies humans, `Ledger` handles only high-risk approvals, `Hedera` is the payout rail, and `0G`
-        is out of scope.
-      </p>
+      <header>
+        <h1>Architecture</h1>
+        <span class="tag">Edgebind Oracle</span>
+      </header>
 
-      <section class="panel" aria-labelledby="architecture-graph-title">
-        <h2 id="architecture-graph-title" style="position:absolute;left:-9999px;">Architecture Graph</h2>
-        <svg viewBox="0 0 1240 720" role="img" aria-label="Architecture graph showing owner web, worker mobile, shared Next.js runtime, World verification, Ledger approval, and Hedera payout flow.">
+      <section class="panel" aria-labelledby="arch-title">
+        <h2 id="arch-title" style="position:absolute;left:-9999px;">Architecture Graph</h2>
+        <svg viewBox="0 0 1200 660" role="img" aria-label="Architecture graph showing owner web, worker mobile, shared Next.js runtime, World verification, Ledger approval, and Hedera payout flow.">
           <defs>
-            <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <path d="M0,0 L12,6 L0,12 Z" fill="#4e473d"></path>
-            </marker>
-            <marker id="arrow-owner" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <path d="M0,0 L12,6 L0,12 Z" fill="#b35a2d"></path>
-            </marker>
-            <marker id="arrow-runtime" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <path d="M0,0 L12,6 L0,12 Z" fill="#0b6b70"></path>
-            </marker>
-            <marker id="arrow-worker" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <path d="M0,0 L12,6 L0,12 Z" fill="#2f5b3a"></path>
-            </marker>
-            <marker id="arrow-ledger" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <path d="M0,0 L12,6 L0,12 Z" fill="#7d3340"></path>
-            </marker>
-            <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="rgba(44,32,20,0.14)" />
-            </filter>
+            <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="#8a8278" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-owner" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--owner)" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-runtime" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--runtime)" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-worker" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--worker)" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-ledger" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--ledger)" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-hedera" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--hedera)" stroke-width="1.5" stroke-linecap="round"/></marker>
+            <marker id="a-world" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" fill="none" stroke="var(--world)" stroke-width="1.5" stroke-linecap="round"/></marker>
           </defs>
 
-          <rect x="420" y="30" width="400" height="104" rx="28" fill="rgba(255,251,244,0.96)" stroke="rgba(140,103,33,0.38)" stroke-width="2" filter="url(#shadow)"></rect>
-          <text x="620" y="62" text-anchor="middle" font-family="monospace" font-size="13" letter-spacing="2.1" fill="#8c6721">WORLD</text>
-          <text x="620" y="92" text-anchor="middle" font-size="27" font-weight="700" fill="#161616">Verified humans</text>
-          <text x="620" y="114" text-anchor="middle" font-family="monospace" font-size="14" fill="#5f574d">worker eligibility + human-backed agent authority</text>
+          <!-- ── World ── -->
+          <rect x="430" y="24" width="340" height="80" rx="40" fill="#fffbf2" stroke="var(--world)" stroke-width="1.5"/>
+          <circle cx="474" cy="64" r="18" fill="none" stroke="var(--world)" stroke-width="1.2"/>
+          <text x="474" y="69" text-anchor="middle" font-size="16" fill="var(--world)">W</text>
+          <text x="504" y="58" font-size="18" font-weight="600" fill="var(--ink)">World</text>
+          <text x="504" y="76" font-size="12" fill="var(--muted)">Human verification</text>
 
-          <rect x="70" y="210" width="280" height="182" rx="28" fill="rgba(255,249,243,0.96)" stroke="rgba(179,90,45,0.4)" stroke-width="2" filter="url(#shadow)"></rect>
-          <text x="110" y="248" font-family="monospace" font-size="12" letter-spacing="2" fill="#b35a2d">OWNER WEB</text>
-          <text x="110" y="282" font-size="30" font-weight="700" fill="#161616">Human-backed agent</text>
-          <text x="110" y="314" font-family="monospace" font-size="14" fill="#5f574d">create task</text>
-          <text x="110" y="338" font-family="monospace" font-size="14" fill="#5f574d">review status</text>
-          <text x="110" y="362" font-family="monospace" font-size="14" fill="#5f574d">approve high-risk only</text>
-          <text x="110" y="386" font-family="monospace" font-size="13" fill="#5f574d">repo: frontend</text>
+          <!-- ── Owner Web (frontend) ── -->
+          <rect x="60" y="190" width="260" height="150" rx="20" fill="#fff8f4" stroke="var(--owner)" stroke-width="1.5"/>
+          <rect x="80" y="206" width="56" height="20" rx="10" fill="var(--owner)" opacity="0.12"/>
+          <text x="108" y="220" text-anchor="middle" font-size="10" font-weight="600" fill="var(--owner)" letter-spacing="0.04em">OWNER</text>
+          <text x="80" y="254" font-size="20" font-weight="600" fill="var(--ink)">Owner Web</text>
+          <text x="80" y="278" font-size="12" fill="var(--muted)">Create task</text>
+          <text x="80" y="296" font-size="12" fill="var(--muted)">Review status</text>
+          <text x="80" y="314" font-size="12" fill="var(--muted)">Approve high-risk</text>
 
-          <rect x="420" y="180" width="400" height="244" rx="32" fill="rgba(255,253,248,0.98)" stroke="rgba(11,107,112,0.42)" stroke-width="2.4" filter="url(#shadow)"></rect>
-          <text x="460" y="220" font-family="monospace" font-size="12" letter-spacing="2" fill="#0b6b70">FRONTEND / NEXT.JS RUNTIME</text>
-          <text x="460" y="258" font-size="34" font-weight="700" fill="#161616">Shared task core</text>
-          <text x="460" y="294" font-family="monospace" font-size="14" fill="#5f574d">task API + storage</text>
-          <text x="460" y="318" font-family="monospace" font-size="14" fill="#5f574d">proof validation</text>
-          <text x="460" y="342" font-family="monospace" font-size="14" fill="#5f574d">risk routing</text>
-          <text x="460" y="366" font-family="monospace" font-size="14" fill="#5f574d">payout orchestration</text>
-          <text x="460" y="400" font-family="monospace" font-size="13" fill="#5f574d">no separate backend app</text>
+          <!-- ── Shared Runtime (frontend) ── -->
+          <rect x="400" y="168" width="400" height="194" rx="24" fill="#f5fcfc" stroke="var(--runtime)" stroke-width="1.8"/>
+          <rect x="424" y="186" width="72" height="20" rx="10" fill="var(--runtime)" opacity="0.12"/>
+          <text x="460" y="200" text-anchor="middle" font-size="10" font-weight="600" fill="var(--runtime)" letter-spacing="0.04em">RUNTIME</text>
+          <text x="424" y="240" font-size="22" font-weight="600" fill="var(--ink)">Next.js Runtime</text>
+          <text x="424" y="266" font-size="12" fill="var(--muted)">Task API + storage</text>
+          <text x="424" y="284" font-size="12" fill="var(--muted)">Proof validation</text>
+          <text x="424" y="302" font-size="12" fill="var(--muted)">Risk routing</text>
+          <text x="424" y="320" font-size="12" fill="var(--muted)">Payout orchestration</text>
+          <text x="424" y="346" font-size="11" font-style="italic" fill="var(--muted)" opacity="0.7">repo: frontend</text>
 
-          <rect x="890" y="210" width="280" height="182" rx="28" fill="rgba(249,252,247,0.97)" stroke="rgba(47,91,58,0.4)" stroke-width="2" filter="url(#shadow)"></rect>
-          <text x="930" y="248" font-family="monospace" font-size="12" letter-spacing="2" fill="#2f5b3a">WORKER MOBILE</text>
-          <text x="930" y="282" font-size="30" font-weight="700" fill="#161616">Verified worker</text>
-          <text x="930" y="314" font-family="monospace" font-size="14" fill="#5f574d">accept task</text>
-          <text x="930" y="338" font-family="monospace" font-size="14" fill="#5f574d">submit proof</text>
-          <text x="930" y="362" font-family="monospace" font-size="14" fill="#5f574d">view payout outcome</text>
-          <text x="930" y="386" font-family="monospace" font-size="13" fill="#5f574d">repo: mobile</text>
+          <!-- ── Worker Mobile ── -->
+          <rect x="880" y="190" width="260" height="150" rx="20" fill="#f5faf6" stroke="var(--worker)" stroke-width="1.5"/>
+          <rect x="900" y="206" width="66" height="20" rx="10" fill="var(--worker)" opacity="0.12"/>
+          <text x="933" y="220" text-anchor="middle" font-size="10" font-weight="600" fill="var(--worker)" letter-spacing="0.04em">WORKER</text>
+          <text x="900" y="254" font-size="20" font-weight="600" fill="var(--ink)">Worker Mobile</text>
+          <text x="900" y="278" font-size="12" fill="var(--muted)">Accept task</text>
+          <text x="900" y="296" font-size="12" fill="var(--muted)">Submit proof</text>
+          <text x="900" y="314" font-size="12" fill="var(--muted)">View payout</text>
 
-          <rect x="770" y="520" width="200" height="116" rx="24" fill="rgba(255,247,248,0.98)" stroke="rgba(125,51,64,0.42)" stroke-width="2" filter="url(#shadow)"></rect>
-          <text x="870" y="554" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="2" fill="#7d3340">LEDGER</text>
-          <text x="870" y="586" text-anchor="middle" font-size="28" font-weight="700" fill="#161616">Manual approval</text>
-          <text x="870" y="610" text-anchor="middle" font-family="monospace" font-size="13" fill="#5f574d">high-risk only</text>
+          <!-- ── Hedera ── -->
+          <rect x="310" y="470" width="260" height="80" rx="40" fill="#f2fbf7" stroke="var(--hedera)" stroke-width="1.5"/>
+          <circle cx="354" cy="510" r="18" fill="none" stroke="var(--hedera)" stroke-width="1.2"/>
+          <text x="354" y="515" text-anchor="middle" font-size="16" fill="var(--hedera)">H</text>
+          <text x="384" y="504" font-size="18" font-weight="600" fill="var(--ink)">Hedera</text>
+          <text x="384" y="522" font-size="12" fill="var(--muted)">Payout rail</text>
 
-          <rect x="310" y="520" width="300" height="116" rx="24" fill="rgba(246,253,250,0.98)" stroke="rgba(12,130,100,0.42)" stroke-width="2" filter="url(#shadow)"></rect>
-          <text x="460" y="554" text-anchor="middle" font-family="monospace" font-size="12" letter-spacing="2" fill="#0c8264">HEDERA</text>
-          <text x="460" y="586" text-anchor="middle" font-size="28" font-weight="700" fill="#161616">Payout rail</text>
-          <text x="460" y="610" text-anchor="middle" font-family="monospace" font-size="13" fill="#5f574d">auto-release or post-approval settlement</text>
+          <!-- ── Ledger ── -->
+          <rect x="700" y="470" width="260" height="80" rx="40" fill="#fdf5f6" stroke="var(--ledger)" stroke-width="1.5"/>
+          <circle cx="744" cy="510" r="18" fill="none" stroke="var(--ledger)" stroke-width="1.2"/>
+          <text x="744" y="515" text-anchor="middle" font-size="16" fill="var(--ledger)">L</text>
+          <text x="774" y="504" font-size="18" font-weight="600" fill="var(--ink)">Ledger</text>
+          <text x="774" y="522" font-size="12" fill="var(--muted)">High-risk approval</text>
 
-          <line x1="520" y1="134" x2="280" y2="210" stroke="#8c6721" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrow)"></line>
-          <line x1="720" y1="134" x2="960" y2="210" stroke="#8c6721" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrow)"></line>
-          <text x="372" y="158" font-family="monospace" font-size="12" fill="#8c6721">verifies</text>
-          <text x="858" y="158" font-family="monospace" font-size="12" fill="#8c6721">verifies</text>
+          <!-- ── Connections ── -->
 
-          <line x1="350" y1="286" x2="420" y2="286" stroke="#b35a2d" stroke-width="3" marker-end="url(#arrow-owner)"></line>
-          <text x="385" y="272" text-anchor="middle" font-family="monospace" font-size="12" fill="#b35a2d">create task</text>
+          <!-- World → Owner (verifies) -->
+          <path d="M490 104 Q380 148 280 190" fill="none" stroke="var(--world)" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a-world)"/>
+          <text x="362" y="136" font-size="11" fill="var(--world)" font-weight="500">verifies</text>
 
-          <line x1="820" y1="316" x2="890" y2="316" stroke="#2f5b3a" stroke-width="3" marker-end="url(#arrow-worker)"></line>
-          <text x="855" y="302" text-anchor="middle" font-family="monospace" font-size="12" fill="#2f5b3a">task feed</text>
+          <!-- World → Worker (verifies) -->
+          <path d="M710 104 Q820 148 920 190" fill="none" stroke="var(--world)" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a-world)"/>
+          <text x="828" y="136" font-size="11" fill="var(--world)" font-weight="500">verifies</text>
 
-          <line x1="890" y1="350" x2="820" y2="350" stroke="#2f5b3a" stroke-width="3" marker-end="url(#arrow-runtime)"></line>
-          <text x="855" y="378" text-anchor="middle" font-family="monospace" font-size="12" fill="#2f5b3a">accept + proof</text>
+          <!-- Owner → Runtime (create task) -->
+          <line x1="320" y1="258" x2="400" y2="258" stroke="var(--owner)" stroke-width="2" marker-end="url(#a-owner)"/>
+          <rect x="330" y="240" width="62" height="16" rx="8" fill="var(--paper)"/>
+          <text x="361" y="251" text-anchor="middle" font-size="10" fill="var(--owner)" font-weight="500">create</text>
 
-          <path d="M620 424 C620 470 520 470 520 520" fill="none" stroke="#0c8264" stroke-width="3" marker-end="url(#arrow-runtime)"></path>
-          <text x="548" y="474" text-anchor="middle" font-family="monospace" font-size="12" fill="#0c8264">low-risk payout</text>
+          <!-- Runtime → Owner (status) -->
+          <line x1="400" y1="286" x2="320" y2="286" stroke="var(--runtime)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a-runtime)"/>
+          <rect x="334" y="290" width="52" height="16" rx="8" fill="var(--paper)"/>
+          <text x="361" y="301" text-anchor="middle" font-size="10" fill="var(--runtime)" font-weight="500">status</text>
 
-          <path d="M700 424 C700 468 820 468 820 520" fill="none" stroke="#7d3340" stroke-width="3" marker-end="url(#arrow-ledger)"></path>
-          <text x="780" y="474" text-anchor="middle" font-family="monospace" font-size="12" fill="#7d3340">high-risk review</text>
+          <!-- Runtime → Worker (task feed) -->
+          <line x1="800" y1="258" x2="880" y2="258" stroke="var(--runtime)" stroke-width="2" marker-end="url(#a-runtime)"/>
+          <rect x="812" y="240" width="56" height="16" rx="8" fill="var(--paper)"/>
+          <text x="840" y="251" text-anchor="middle" font-size="10" fill="var(--runtime)" font-weight="500">tasks</text>
 
-          <line x1="770" y1="578" x2="610" y2="578" stroke="#7d3340" stroke-width="3" marker-end="url(#arrow-ledger)"></line>
-          <text x="690" y="564" text-anchor="middle" font-family="monospace" font-size="12" fill="#7d3340">approved payout</text>
+          <!-- Worker → Runtime (accept + proof) -->
+          <line x1="880" y1="286" x2="800" y2="286" stroke="var(--worker)" stroke-width="2" marker-end="url(#a-worker)"/>
+          <rect x="814" y="290" width="52" height="16" rx="8" fill="var(--paper)"/>
+          <text x="840" y="301" text-anchor="middle" font-size="10" fill="var(--worker)" font-weight="500">proof</text>
 
-          <line x1="530" y1="210" x2="300" y2="392" stroke="#0b6b70" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#arrow-runtime)"></line>
-          <text x="372" y="412" text-anchor="middle" font-family="monospace" font-size="12" fill="#0b6b70">status</text>
+          <!-- Runtime → Hedera (low-risk payout) -->
+          <path d="M540 362 C540 416 470 416 460 470" fill="none" stroke="var(--hedera)" stroke-width="2" marker-end="url(#a-hedera)"/>
+          <rect x="456" y="404" width="74" height="16" rx="8" fill="var(--paper)"/>
+          <text x="493" y="415" text-anchor="middle" font-size="10" fill="var(--hedera)" font-weight="500">low-risk</text>
+
+          <!-- Runtime → Ledger (high-risk review) -->
+          <path d="M680 362 C680 416 760 416 780 470" fill="none" stroke="var(--ledger)" stroke-width="2" marker-end="url(#a-ledger)"/>
+          <rect x="696" y="404" width="74" height="16" rx="8" fill="var(--paper)"/>
+          <text x="733" y="415" text-anchor="middle" font-size="10" fill="var(--ledger)" font-weight="500">high-risk</text>
+
+          <!-- Ledger → Hedera (approved payout) -->
+          <line x1="700" y1="510" x2="570" y2="510" stroke="var(--ledger)" stroke-width="2" marker-end="url(#a-ledger)"/>
+          <rect x="604" y="494" width="68" height="16" rx="8" fill="var(--paper)"/>
+          <text x="638" y="505" text-anchor="middle" font-size="10" fill="var(--ledger)" font-weight="500">approved</text>
+
+          <!-- Subtle grid dots for texture -->
+          <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="14" cy="14" r="0.5" fill="rgba(0,0,0,0.06)"/>
+          </pattern>
+          <rect width="1200" height="660" fill="url(#dots)" pointer-events="none" opacity="0.5"/>
         </svg>
 
         <div class="legend" aria-label="Graph legend">
-          <span><i class="swatch" style="background:var(--world)"></i> World = verification</span>
-          <span><i class="swatch" style="background:var(--runtime)"></i> frontend = owner web + shared runtime</span>
-          <span><i class="swatch" style="background:var(--worker)"></i> mobile = worker surface</span>
-          <span><i class="swatch" style="background:var(--ledger)"></i> Ledger = high-risk approval only</span>
-          <span><i class="swatch" style="background:var(--hedera)"></i> Hedera = payout rail</span>
+          <span><i class="swatch" style="background:var(--world)"></i>World</span>
+          <span><i class="swatch" style="background:var(--owner)"></i>Owner Web</span>
+          <span><i class="swatch" style="background:var(--runtime)"></i>Runtime</span>
+          <span><i class="swatch" style="background:var(--worker)"></i>Worker Mobile</span>
+          <span><i class="swatch" style="background:var(--ledger)"></i>Ledger</span>
+          <span><i class="swatch" style="background:var(--hedera)"></i>Hedera</span>
         </div>
       </section>
 
-      <section class="mini-panel">
-        <div class="mini-head">
-          <h2>Lifecycle</h2>
-          <p class="note">final task flow</p>
-        </div>
-        <svg viewBox="0 0 1240 150" role="img" aria-label="Task lifecycle from open to accepted to submitted to paid or pending approval or rejected.">
+      <section class="lifecycle">
+        <h2>Task Lifecycle</h2>
+        <svg viewBox="0 0 1100 120" role="img" aria-label="Task lifecycle: open, accepted, submitted, then paid or pending approval or rejected.">
           <defs>
-            <marker id="tiny-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-              <path d="M0,0 L10,5 L0,10 Z" fill="#4e473d"></path>
-            </marker>
+            <marker id="ta" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L6,3.5 L0,6.5" fill="none" stroke="#8a8278" stroke-width="1.3" stroke-linecap="round"/></marker>
+            <marker id="ta-h" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L6,3.5 L0,6.5" fill="none" stroke="var(--hedera)" stroke-width="1.3" stroke-linecap="round"/></marker>
+            <marker id="ta-l" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L6,3.5 L0,6.5" fill="none" stroke="var(--ledger)" stroke-width="1.3" stroke-linecap="round"/></marker>
           </defs>
-          <rect x="20" y="38" width="150" height="56" rx="20" fill="rgba(255,251,245,0.96)" stroke="rgba(22,22,22,0.16)"></rect>
-          <rect x="224" y="38" width="150" height="56" rx="20" fill="rgba(255,251,245,0.96)" stroke="rgba(22,22,22,0.16)"></rect>
-          <rect x="428" y="38" width="150" height="56" rx="20" fill="rgba(255,251,245,0.96)" stroke="rgba(22,22,22,0.16)"></rect>
-          <rect x="720" y="18" width="190" height="56" rx="20" fill="rgba(246,253,250,0.96)" stroke="rgba(12,130,100,0.28)"></rect>
-          <rect x="720" y="82" width="190" height="56" rx="20" fill="rgba(255,247,248,0.96)" stroke="rgba(125,51,64,0.28)"></rect>
-          <rect x="1010" y="50" width="190" height="56" rx="20" fill="rgba(255,250,246,0.96)" stroke="rgba(179,90,45,0.24)"></rect>
 
-          <text x="95" y="72" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">open</text>
-          <text x="299" y="72" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">accepted</text>
-          <text x="503" y="72" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">submitted</text>
-          <text x="815" y="52" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">paid</text>
-          <text x="815" y="116" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">pending_approval</text>
-          <text x="1105" y="84" text-anchor="middle" font-family="monospace" font-size="14" fill="#161616">rejected</text>
+          <!-- Nodes -->
+          <rect x="16" y="38" width="120" height="44" rx="22" fill="#fff" stroke="var(--line)" stroke-width="1.2"/>
+          <text x="76" y="65" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)">open</text>
 
-          <line x1="170" y1="66" x2="224" y2="66" stroke="#4e473d" stroke-width="2.5" marker-end="url(#tiny-arrow)"></line>
-          <line x1="374" y1="66" x2="428" y2="66" stroke="#4e473d" stroke-width="2.5" marker-end="url(#tiny-arrow)"></line>
-          <line x1="578" y1="52" x2="720" y2="52" stroke="#0c8264" stroke-width="2.5" marker-end="url(#tiny-arrow)"></line>
-          <line x1="578" y1="94" x2="720" y2="110" stroke="#7d3340" stroke-width="2.5" marker-end="url(#tiny-arrow)"></line>
-          <line x1="910" y1="110" x2="1010" y2="78" stroke="#7d3340" stroke-width="2.5" marker-end="url(#tiny-arrow)"></line>
+          <rect x="190" y="38" width="120" height="44" rx="22" fill="#fff" stroke="var(--line)" stroke-width="1.2"/>
+          <text x="250" y="65" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)">accepted</text>
 
-          <text x="648" y="40" text-anchor="middle" font-family="monospace" font-size="11" fill="#0c8264">low risk</text>
-          <text x="648" y="108" text-anchor="middle" font-family="monospace" font-size="11" fill="#7d3340">high risk</text>
+          <rect x="364" y="38" width="120" height="44" rx="22" fill="#fff" stroke="var(--line)" stroke-width="1.2"/>
+          <text x="424" y="65" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)">submitted</text>
+
+          <rect x="590" y="14" width="120" height="44" rx="22" fill="#f2fbf7" stroke="var(--hedera)" stroke-width="1.2"/>
+          <text x="650" y="41" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)">paid</text>
+
+          <rect x="590" y="72" width="170" height="44" rx="22" fill="#fdf5f6" stroke="var(--ledger)" stroke-width="1.2"/>
+          <text x="675" y="99" text-anchor="middle" font-size="13" font-weight="500" fill="var(--ink)">pending approval</text>
+
+          <rect x="860" y="72" width="120" height="44" rx="22" fill="#fff" stroke="var(--line)" stroke-width="1.2"/>
+          <text x="920" y="99" text-anchor="middle" font-size="13" font-weight="500" fill="var(--muted)">rejected</text>
+
+          <!-- Arrows -->
+          <line x1="136" y1="60" x2="190" y2="60" stroke="#8a8278" stroke-width="1.5" marker-end="url(#ta)"/>
+          <line x1="310" y1="60" x2="364" y2="60" stroke="#8a8278" stroke-width="1.5" marker-end="url(#ta)"/>
+          <path d="M484 50 Q530 36 590 36" fill="none" stroke="var(--hedera)" stroke-width="1.5" marker-end="url(#ta-h)"/>
+          <path d="M484 72 Q530 88 590 94" fill="none" stroke="var(--ledger)" stroke-width="1.5" marker-end="url(#ta-l)"/>
+          <line x1="760" y1="94" x2="860" y2="94" stroke="var(--ledger)" stroke-width="1.5" marker-end="url(#ta-l)"/>
+
+          <!-- Labels on branches -->
+          <text x="530" y="30" text-anchor="middle" font-size="10" fill="var(--hedera)" font-weight="500">low risk</text>
+          <text x="530" y="102" text-anchor="middle" font-size="10" fill="var(--ledger)" font-weight="500">high risk</text>
         </svg>
-        <p class="footer">Owner creates task → worker accepts → worker submits proof → backend validates → low-risk pays on Hedera, high-risk pauses for Ledger approval.</p>
       </section>
     </main>
   </body>
